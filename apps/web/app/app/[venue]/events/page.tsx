@@ -3,12 +3,14 @@ export const dynamic = "force-dynamic";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
+import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
 
-import { createEventAction, refundEventBookingAction, updateEventAction } from "@/server/actions/events";
+import { getPaidEventGateCopy } from "@/lib/venue-payment-capability";
+import { createEventAction, updateEventAction } from "@/server/actions/events";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { listEventBookings, listVenueEvents } from "@/server/repositories/events";
 import { requireVenueAccess } from "@/server/repositories/venues";
+import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 export default async function VenueEventsPage({
   params,
@@ -22,6 +24,7 @@ export default async function VenueEventsPage({
     requireVenueAccess(venue),
     searchParams,
   ]);
+  const capability = await getVenuePaymentCapability(venueRecord.id);
   const events = await listVenueEvents(venueRecord.id);
   const bookingsByEvent = await Promise.all(
     events.map(async (event) => ({
@@ -32,237 +35,232 @@ export default async function VenueEventsPage({
   const bookingsLookup = new Map(bookingsByEvent.map((entry) => [entry.eventId, entry.bookings]));
   const createAction = createEventAction.bind(null, venue);
   const updateAction = updateEventAction.bind(null, venue);
+  const publishedCount = events.filter((e) => e.status === "published").length;
 
   return (
-    <div className="space-y-6">
-      <Card className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Events</p>
-          <h1 className="font-display text-4xl text-ink">Event operations</h1>
-          <p className="max-w-3xl text-sm leading-6 text-ink/65">
-            Create casual taproom events, publish public pages, capture RSVP or paid bookings, and jump directly into
-            guest-list check-in.
+    <div>
+      {/* Page header */}
+      <div className="flex items-start justify-between mb-7 gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+            Event Management
+          </h1>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+            {events.length} events · {publishedCount} published
           </p>
         </div>
-        {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-        {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
-      </Card>
+      </div>
 
+      {!capability.canSellPaidEvents && (
+        <div className="mb-5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+          <strong>Stripe not connected.</strong> Paid events and memberships are unavailable. Free RSVPs still work.{" "}
+          <Link className="font-semibold underline" href={`/app/${venue}/billing` as Route}>
+            Set up billing →
+          </Link>
+        </div>
+      )}
+
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
+
+      {/* Events list */}
+      {events.length === 0 ? (
+        <Card style={{ marginBottom: 20 }}>
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+            <div style={{ fontSize: 36 }}>🎟</div>
+            <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No events yet</div>
+            <div className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
+              Create your first RSVP or paid event below.
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3 mb-5">
+          {events.map((event) => {
+            const bookings = bookingsLookup.get(event.id) ?? [];
+            const confirmedSeats = bookings
+              .filter((b) => b.booking_status === "confirmed")
+              .reduce((t, b) => t + b.party_size, 0);
+            const dateParts = formatDate(event.starts_at).split(" ");
+
+            return (
+              <Card key={event.id} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                {/* Date chip */}
+                <div
+                  className="flex-shrink-0 text-center rounded-[10px] py-2.5"
+                  style={{ width: 56, background: "var(--accent-light)" }}
+                >
+                  <div
+                    className="text-[10px] font-bold uppercase tracking-[0.8px]"
+                    style={{ color: "var(--accent-dark)" }}
+                  >
+                    {dateParts[0]}
+                  </div>
+                  <div
+                    className="text-[22px] font-black leading-tight"
+                    style={{ color: "var(--accent-dark)" }}
+                  >
+                    {dateParts[1]?.replace(",", "")}
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-bold text-[15px]">{event.title}</span>
+                    <Badge variant={
+                      event.status === "published" ? "success" :
+                      event.status === "cancelled" ? "error" :
+                      event.status === "archived" ? "default" : "warning"
+                    }>
+                      {event.status}
+                    </Badge>
+                    {event.price_cents === null || event.price_cents === 0 ? (
+                      <Badge variant="info">Free</Badge>
+                    ) : (
+                      <Badge variant="accent">{formatCurrency(event.price_cents, event.currency)}</Badge>
+                    )}
+                  </div>
+                  <div className="text-[13px] mb-1.5" style={{ color: "var(--c-muted)" }}>
+                    {formatDate(event.starts_at)} · Cap: {event.capacity ?? "Open"}
+                  </div>
+                  {event.description && (
+                    <div className="text-[13px] leading-relaxed mb-2">{event.description}</div>
+                  )}
+                  <div className="flex gap-3 text-[12.5px]" style={{ color: "var(--c-muted)" }}>
+                    <span>🎟 {confirmedSeats} booked</span>
+                    <Link
+                      className="font-semibold"
+                      href={`/app/${venue}/events/${event.id}/check-in` as Route}
+                      style={{ color: "var(--accent)" }}
+                    >
+                      Check-in →
+                    </Link>
+                    <Link
+                      className="font-semibold"
+                      href={`/v/${venue}/events/${event.slug}` as Route}
+                      style={{ color: "var(--accent)" }}
+                    >
+                      Public page →
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Inline edit */}
+                <details className="flex-shrink-0">
+                  <summary className="cursor-pointer">
+                    <Button size="sm" type="button" variant="secondary">Edit</Button>
+                  </summary>
+                  <div
+                    className="absolute z-10 mt-2 right-0 rounded-xl border border-rim bg-white shadow-modal p-4 w-[480px]"
+                    style={{ position: "relative" }}
+                  >
+                    <form action={updateAction} className="flex flex-col gap-3">
+                      <input name="event_id" type="hidden" value={event.id} />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1 col-span-2">
+                          <Label htmlFor={`title-${event.id}`}>Title</Label>
+                          <Input defaultValue={event.title} id={`title-${event.id}`} name="title" required />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`status-${event.id}`}>Status</Label>
+                          <Select defaultValue={event.status} id={`status-${event.id}`} name="status">
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                            <option value="archived">Archived</option>
+                            <option value="cancelled">Cancelled</option>
+                          </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`capacity-${event.id}`}>Capacity</Label>
+                          <Input defaultValue={event.capacity ?? ""} id={`capacity-${event.id}`} name="capacity" type="number" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`price-${event.id}`}>Price (cents)</Label>
+                          <Input defaultValue={event.price_cents ?? ""} id={`price-${event.id}`} name="price_cents" type="number" />
+                          {!capability.canSellPaidEvents && (
+                            <span className="text-xs text-amber-600">{getPaidEventGateCopy()}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`starts-${event.id}`}>Starts at</Label>
+                          <Input
+                            defaultValue={toDateTimeLocal(event.starts_at)}
+                            id={`starts-${event.id}`}
+                            name="starts_at"
+                            required
+                            type="datetime-local"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1 col-span-2">
+                          <Label htmlFor={`desc-${event.id}`}>Description</Label>
+                          <Textarea defaultValue={event.description ?? ""} id={`desc-${event.id}`} name="description" rows={2} />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" type="submit">Save changes</Button>
+                      </div>
+                    </form>
+                  </div>
+                </details>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create event form */}
       <Card>
-        <form action={createAction} className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="create-event-title">Title</Label>
-            <Input id="create-event-title" name="title" placeholder="Trivia Night" required />
+        <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New event</div>
+        <form action={createAction} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="create-title">Title <span style={{ color: "var(--accent)" }}>*</span></Label>
+            <Input id="create-title" name="title" placeholder="Trivia Night" required />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-slug">Slug</Label>
-            <Input id="create-event-slug" name="slug" placeholder="trivia-night" />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-capacity">Capacity</Label>
+              <Input id="create-capacity" name="capacity" placeholder="80" type="number" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-price">Price (cents)</Label>
+              <Input id="create-price" name="price_cents" placeholder="1500" type="number" />
+              <span className="text-xs" style={{ color: "var(--c-muted)" }}>Leave empty for free</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-status">Status</Label>
+              <Select defaultValue="draft" id="create-status" name="status">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-status">Status</Label>
-            <Select defaultValue="draft" id="create-event-status" name="status">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-              <option value="cancelled">Cancelled</option>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-starts">Starts at <span style={{ color: "var(--accent)" }}>*</span></Label>
+              <Input id="create-starts" name="starts_at" required type="datetime-local" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-ends">Ends at</Label>
+              <Input id="create-ends" name="ends_at" type="datetime-local" />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-starts-at">Starts at</Label>
-            <Input id="create-event-starts-at" name="starts_at" required type="datetime-local" />
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="create-desc">Description</Label>
+            <Textarea id="create-desc" name="description" placeholder="Short event copy for the public page" rows={2} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-ends-at">Ends at</Label>
-            <Input id="create-event-ends-at" name="ends_at" type="datetime-local" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-capacity">Capacity</Label>
-            <Input id="create-event-capacity" name="capacity" placeholder="80" type="number" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-price">Price cents</Label>
-            <Input id="create-event-price" name="price_cents" placeholder="1500" type="number" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-currency">Currency</Label>
-            <Input defaultValue="USD" id="create-event-currency" name="currency" maxLength={3} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-event-image">Image URL</Label>
-            <Input id="create-event-image" name="image_url" type="url" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="create-event-description">Description</Label>
-            <Textarea id="create-event-description" name="description" placeholder="Short event copy for the public page" />
-          </div>
-          <div className="md:col-span-2">
+          <div className="flex gap-2">
             <Button type="submit">Create event</Button>
           </div>
         </form>
       </Card>
-
-      <section className="grid gap-4">
-        {events.map((event) => {
-          const bookings = bookingsLookup.get(event.id) ?? [];
-          const confirmedSeats = bookings
-            .filter((booking) => booking.booking_status === "confirmed")
-            .reduce((total, booking) => total + booking.party_size, 0);
-
-          return (
-            <Card className="space-y-5" key={event.id}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">{event.status}</p>
-                  <h2 className="font-display text-3xl text-ink">{event.title}</h2>
-                  <p className="text-sm text-ink/55">{formatDate(event.starts_at)}</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-5 text-sm font-semibold text-ink transition hover:border-ink/20"
-                    href={`/v/${venue}/events/${event.slug}` as Route}
-                  >
-                    View public page
-                  </Link>
-                  <Link
-                    className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-5 text-sm font-semibold text-parchment shadow-panel transition hover:bg-pine/90"
-                    href={`/app/${venue}/events/${event.id}/check-in` as Route}
-                  >
-                    Open check-in
-                  </Link>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-3xl bg-mist/45 p-4 text-sm text-ink/70">
-                  <p className="font-semibold text-ink">Capacity</p>
-                  <p>{event.capacity ?? "Open"} seats</p>
-                </div>
-                <div className="rounded-3xl bg-mist/45 p-4 text-sm text-ink/70">
-                  <p className="font-semibold text-ink">Reserved</p>
-                  <p>{confirmedSeats} seats confirmed</p>
-                </div>
-                <div className="rounded-3xl bg-mist/45 p-4 text-sm text-ink/70">
-                  <p className="font-semibold text-ink">Pricing</p>
-                  <p>{event.price_cents === null ? "Free RSVP" : formatCurrency(event.price_cents, event.currency)}</p>
-                </div>
-              </div>
-
-              <form action={updateAction} className="grid gap-4 md:grid-cols-2">
-                <input name="event_id" type="hidden" value={event.id} />
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor={`event-title-${event.id}`}>Title</Label>
-                  <Input defaultValue={event.title} id={`event-title-${event.id}`} name="title" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-slug-${event.id}`}>Slug</Label>
-                  <Input defaultValue={event.slug} id={`event-slug-${event.id}`} name="slug" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-status-${event.id}`}>Status</Label>
-                  <Select defaultValue={event.status} id={`event-status-${event.id}`} name="status">
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                    <option value="cancelled">Cancelled</option>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-starts-at-${event.id}`}>Starts at</Label>
-                  <Input
-                    defaultValue={toDateTimeLocal(event.starts_at)}
-                    id={`event-starts-at-${event.id}`}
-                    name="starts_at"
-                    required
-                    type="datetime-local"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-ends-at-${event.id}`}>Ends at</Label>
-                  <Input
-                    defaultValue={event.ends_at ? toDateTimeLocal(event.ends_at) : ""}
-                    id={`event-ends-at-${event.id}`}
-                    name="ends_at"
-                    type="datetime-local"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-capacity-${event.id}`}>Capacity</Label>
-                  <Input defaultValue={event.capacity ?? ""} id={`event-capacity-${event.id}`} name="capacity" type="number" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-price-${event.id}`}>Price cents</Label>
-                  <Input defaultValue={event.price_cents ?? ""} id={`event-price-${event.id}`} name="price_cents" type="number" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-currency-${event.id}`}>Currency</Label>
-                  <Input defaultValue={event.currency} id={`event-currency-${event.id}`} name="currency" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`event-image-${event.id}`}>Image URL</Label>
-                  <Input defaultValue={event.image_url ?? ""} id={`event-image-${event.id}`} name="image_url" type="url" />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor={`event-description-${event.id}`}>Description</Label>
-                  <Textarea defaultValue={event.description ?? ""} id={`event-description-${event.id}`} name="description" />
-                </div>
-                <div className="md:col-span-2">
-                  <Button type="submit">Save event</Button>
-                </div>
-              </form>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-display text-xl text-ink">Bookings</h3>
-                  <p className="text-sm text-ink/55">{bookings.length} total</p>
-                </div>
-
-                {bookings.length === 0 ? (
-                  <p className="text-sm leading-6 text-ink/65">No bookings yet for this event.</p>
-                ) : (
-                  <div className="grid gap-3">
-                    {bookings.map((booking) => {
-                      const refundAction = refundEventBookingAction.bind(null, venue, booking.id);
-
-                      return (
-                        <div className="rounded-3xl border border-ink/10 bg-mist/35 p-4" key={booking.id}>
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <p className="font-semibold text-ink">{booking.purchaser_name}</p>
-                              <p className="text-sm text-ink/60">
-                                Party of {booking.party_size} · {booking.booking_status} · {booking.payment_status}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {booking.total_price_cents > 0 ? (
-                                <p className="text-sm font-semibold text-ink/65">
-                                  {formatCurrency(booking.total_price_cents, booking.currency)}
-                                </p>
-                              ) : null}
-                              {booking.payment_status === "paid" && booking.stripe_charge_id ? (
-                                <form action={refundAction}>
-                                  <Button type="submit" variant="ghost">
-                                    Full refund
-                                  </Button>
-                                </form>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-
-        {events.length === 0 ? (
-          <Card>
-            <p className="text-sm leading-6 text-ink/65">No events yet. Create your first RSVP or paid event above.</p>
-          </Card>
-        ) : null}
-      </section>
     </div>
   );
 }

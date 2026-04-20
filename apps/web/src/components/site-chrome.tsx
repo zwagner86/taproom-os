@@ -9,46 +9,67 @@ export async function SiteChrome() {
   const admin = user ? await isPlatformAdmin() : false;
 
   return (
-    <header className="border-b border-white/60 bg-parchment/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:px-8">
+    <header
+      className="border-b backdrop-blur sticky top-0 z-50"
+      style={{ borderColor: "var(--c-border)", background: "oklch(97% 0.008 75 / 0.92)" }}
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5">
         <Link className="flex items-center gap-3" href="/">
-          <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-pine text-sm font-black uppercase tracking-[0.28em] text-parchment">
-            TO
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[13px] font-black tracking-wide text-white"
+            style={{ background: "var(--c-sidebar)" }}
+          >
+            T
           </div>
-          <div>
-            <p className="font-display text-xl text-ink">TaproomOS</p>
-            <p className="text-xs uppercase tracking-[0.2em] text-ink/55">Taproom-first operating system</p>
-          </div>
+          <span className="font-bold text-[16px] tracking-[-0.3px]" style={{ color: "var(--c-text)" }}>
+            TaproomOS
+          </span>
         </Link>
 
-        <nav className="flex items-center gap-3">
-          <Link className="text-sm font-semibold text-ink/70 transition hover:text-ink" href="/v/demo-taproom/menu">
-            Demo menu
+        <nav className="flex items-center gap-4">
+          <Link
+            className="text-[13.5px] font-medium transition"
+            href="/v/demo-taproom/menu"
+            style={{ color: "var(--c-muted)" }}
+          >
+            Demo venue
           </Link>
           {user ? (
             <>
-              <Link className="text-sm font-semibold text-ink/70 transition hover:text-ink" href="/">
+              <Link
+                className="text-[13.5px] font-medium transition"
+                href="/"
+                style={{ color: "var(--c-muted)" }}
+              >
                 Dashboard
               </Link>
-              {admin ? <Badge>Platform Admin</Badge> : null}
-              <span className="hidden text-sm text-ink/50 sm:inline">{user.email}</span>
+              {admin && <Badge variant="accent">Admin</Badge>}
+              <span className="hidden text-[13px] sm:inline" style={{ color: "var(--c-muted)" }}>
+                {user.email}
+              </span>
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/80 px-5 text-sm font-semibold text-ink transition hover:border-ink/20 hover:bg-white"
+                className="inline-flex items-center rounded-lg border px-3.5 py-1.5 text-[13px] font-semibold transition"
                 href="/logout"
+                style={{ borderColor: "var(--c-border)", color: "var(--c-text)" }}
               >
                 Sign out
               </Link>
             </>
           ) : (
             <>
-              <Link className="text-sm font-semibold text-ink/70 transition hover:text-ink" href="/login">
+              <Link
+                className="text-[13.5px] font-medium transition"
+                href="/login"
+                style={{ color: "var(--c-muted)" }}
+              >
                 Sign in
               </Link>
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-5 text-sm font-semibold text-parchment shadow-panel transition hover:bg-pine/90"
+                className="inline-flex items-center rounded-lg px-4 py-1.5 text-[13px] font-semibold text-white transition"
                 href="/signup"
+                style={{ background: "var(--c-sidebar)" }}
               >
-                Start setup
+                Get started
               </Link>
             </>
           )}
@@ -57,4 +78,3 @@ export async function SiteChrome() {
     </header>
   );
 }
-

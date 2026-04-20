@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
 import { getEnv } from "@/env";
+import { getPaidEventGateCopy, getRefundGateCopy } from "@/lib/venue-payment-capability";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 import { getPaymentsProvider } from "@/server/providers";
@@ -28,13 +29,15 @@ import {
 import { getStripeConnectionForVenue } from "@/server/repositories/providers";
 import { requireVenueAccess } from "@/server/repositories/venues";
 import { sendEmailFirstNotification } from "@/server/services/notifications";
+import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 type EventInsert = Database["public"]["Tables"]["events"]["Insert"];
 type EventUpdate = Database["public"]["Tables"]["events"]["Update"];
 
 export async function createEventAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
-  const payload = buildCreateEventPayload(access.venue.id, formData);
+  const capability = await getVenuePaymentCapability(access.venue.id);
+  const { payload, warning } = buildCreateEventPayload(access.venue.id, formData, capability.canSellPaidEvents);
 
   try {
     await createEventAdmin(payload);
@@ -44,19 +47,20 @@ export async function createEventAction(venueSlug: string, formData: FormData) {
   }
 
   revalidateEventPaths(venueSlug);
-  redirect(`/app/${venueSlug}/events?message=${encodeURIComponent("Event created.")}`);
+  redirect(`/app/${venueSlug}/events?message=${encodeURIComponent(warning ?? "Event created.")}`);
 }
 
 export async function updateEventAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
   const eventId = String(formData.get("event_id") ?? "");
   const existing = await getVenueEventById(access.venue.id, eventId);
+  const capability = await getVenuePaymentCapability(access.venue.id);
 
   if (!existing) {
     redirect(`/app/${venueSlug}/events?error=${encodeURIComponent("Event not found.")}`);
   }
 
-  const updates = buildUpdateEventPayload(formData);
+  const { updates, warning } = buildUpdateEventPayload(formData, existing.published, capability.canSellPaidEvents);
 
   try {
     const updated = await updateEventAdmin(access.venue.id, eventId, updates);
@@ -86,7 +90,7 @@ export async function updateEventAction(venueSlug: string, formData: FormData) {
   }
 
   revalidateEventPaths(venueSlug, eventId, existing.slug);
-  redirect(`/app/${venueSlug}/events?message=${encodeURIComponent("Event updated.")}`);
+  redirect(`/app/${venueSlug}/events?message=${encodeURIComponent(warning ?? "Event updated.")}`);
 }
 
 export async function createFreeEventBookingAction(venueSlug: string, eventSlug: string, formData: FormData) {
@@ -134,10 +138,15 @@ export async function createFreeEventBookingAction(venueSlug: string, eventSlug:
 
 export async function createPaidEventCheckoutAction(venueSlug: string, eventSlug: string, formData: FormData) {
   const { event, venue } = await getPublicEventOrRedirect(venueSlug, eventSlug);
+  const capability = await getVenuePaymentCapability(venue.id);
   const connection = await getStripeConnectionForVenue(venue.id);
 
+  if (!capability.canSellPaidEvents) {
+    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent(getPaidEventGateCopy())}`);
+  }
+
   if (!connection?.stripe_account_id) {
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent("Payments are not connected for this venue yet.")}`);
+    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent(getPaidEventGateCopy())}`);
   }
 
   if (event.price_cents === null) {
@@ -294,11 +303,16 @@ export async function adjustCheckInWithTokenAction(token: string, formData: Form
 
 export async function refundEventBookingAction(venueSlug: string, bookingId: string) {
   const access = await requireVenueAccess(venueSlug);
+  const capability = await getVenuePaymentCapability(access.venue.id);
   const booking = await getEventBookingById(access.venue.id, bookingId);
   const connection = await getStripeConnectionForVenue(access.venue.id);
 
   if (!booking) {
     redirect(`/app/${venueSlug}/billing?error=${encodeURIComponent("Booking not found.")}`);
+  }
+
+  if (!capability.canIssueRefunds) {
+    redirect(`/app/${venueSlug}/billing?error=${encodeURIComponent(getRefundGateCopy())}`);
   }
 
   if (!connection?.stripe_account_id || !booking.stripe_charge_id) {
@@ -315,44 +329,61 @@ export async function refundEventBookingAction(venueSlug: string, bookingId: str
   redirect(`/app/${venueSlug}/billing?message=${encodeURIComponent("Refund requested. Stripe will confirm it shortly.")}`);
 }
 
-function buildCreateEventPayload(venueId: string, formData: FormData): EventInsert {
+function buildCreateEventPayload(venueId: string, formData: FormData, canSellPaidEvents: boolean) {
   const title = String(formData.get("title") ?? "").trim();
-  const status = String(formData.get("status") ?? "draft");
+  const priceCents = parseOptionalInteger(formData.get("price_cents"));
+  const requestedStatus = String(formData.get("status") ?? "draft");
+  const blockedFromPublishingPaidEvent = requestedStatus === "published" && priceCents !== null && !canSellPaidEvents;
+  const status = blockedFromPublishingPaidEvent ? "draft" : requestedStatus;
   const published = status === "published";
 
   return {
-    capacity: parseOptionalInteger(formData.get("capacity")),
-    currency: String(formData.get("currency") ?? "USD").trim().toUpperCase() || "USD",
-    description: normalizeOptionalString(formData.get("description")),
-    ends_at: normalizeOptionalDate(formData.get("ends_at")),
-    image_url: normalizeOptionalString(formData.get("image_url")),
-    price_cents: parseOptionalInteger(formData.get("price_cents")),
-    published,
-    slug: slugify(String(formData.get("slug") ?? title)),
-    starts_at: normalizeRequiredDate(formData.get("starts_at")),
-    status,
-    title,
-    venue_id: venueId,
+    payload: {
+      capacity: parseOptionalInteger(formData.get("capacity")),
+      currency: String(formData.get("currency") ?? "USD").trim().toUpperCase() || "USD",
+      description: normalizeOptionalString(formData.get("description")),
+      ends_at: normalizeOptionalDate(formData.get("ends_at")),
+      image_url: normalizeOptionalString(formData.get("image_url")),
+      price_cents: priceCents,
+      published,
+      slug: slugify(String(formData.get("slug") ?? title)),
+      starts_at: normalizeRequiredDate(formData.get("starts_at")),
+      status,
+      title,
+      venue_id: venueId,
+    } satisfies EventInsert,
+    warning: blockedFromPublishingPaidEvent
+      ? `${getPaidEventGateCopy()} This paid event was saved as a draft.`
+      : null,
   };
 }
 
-function buildUpdateEventPayload(formData: FormData): EventUpdate {
+function buildUpdateEventPayload(formData: FormData, wasPublished: boolean, canSellPaidEvents: boolean) {
   const title = String(formData.get("title") ?? "").trim();
-  const status = String(formData.get("status") ?? "draft");
+  const priceCents = parseOptionalInteger(formData.get("price_cents"));
+  const requestedStatus = String(formData.get("status") ?? "draft");
+  const blockedFromPublishingPaidEvent =
+    !wasPublished && requestedStatus === "published" && priceCents !== null && !canSellPaidEvents;
+  const status = blockedFromPublishingPaidEvent ? "draft" : requestedStatus;
   const published = status === "published";
 
   return {
-    capacity: parseOptionalInteger(formData.get("capacity")),
-    currency: String(formData.get("currency") ?? "USD").trim().toUpperCase() || "USD",
-    description: normalizeOptionalString(formData.get("description")),
-    ends_at: normalizeOptionalDate(formData.get("ends_at")),
-    image_url: normalizeOptionalString(formData.get("image_url")),
-    price_cents: parseOptionalInteger(formData.get("price_cents")),
-    published,
-    slug: slugify(String(formData.get("slug") ?? title)),
-    starts_at: normalizeRequiredDate(formData.get("starts_at")),
-    status,
-    title,
+    updates: {
+      capacity: parseOptionalInteger(formData.get("capacity")),
+      currency: String(formData.get("currency") ?? "USD").trim().toUpperCase() || "USD",
+      description: normalizeOptionalString(formData.get("description")),
+      ends_at: normalizeOptionalDate(formData.get("ends_at")),
+      image_url: normalizeOptionalString(formData.get("image_url")),
+      price_cents: priceCents,
+      published,
+      slug: slugify(String(formData.get("slug") ?? title)),
+      starts_at: normalizeRequiredDate(formData.get("starts_at")),
+      status,
+      title,
+    } satisfies EventUpdate,
+    warning: blockedFromPublishingPaidEvent
+      ? `${getPaidEventGateCopy()} This paid event remains in draft until billing is ready.`
+      : null,
   };
 }
 

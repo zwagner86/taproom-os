@@ -1,3 +1,4 @@
+export * from "./components/alert";
 export * from "./components/badge";
 export * from "./components/button";
 export * from "./components/card";
@@ -5,5 +6,7 @@ export * from "./components/input";
 export * from "./components/label";
 export * from "./components/mobile-shell";
 export * from "./components/select";
+export * from "./components/tabs";
 export * from "./components/textarea";
+export * from "./components/toggle";
 export * from "./lib/cn";

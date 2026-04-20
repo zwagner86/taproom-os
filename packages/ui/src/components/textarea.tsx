@@ -6,11 +6,12 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        "min-h-28 w-full rounded-3xl border border-ink/10 bg-mist/50 px-4 py-3 text-sm text-ink placeholder:text-ink/45 focus:border-ember/40 focus:outline-none focus:ring-2 focus:ring-ember/20",
+        "w-full rounded-lg border border-rim bg-white px-3 py-[9px] text-sm text-ink placeholder:text-muted resize-vertical",
+        "focus:border-ember focus:outline-none transition-colors",
         className,
       )}
+      rows={3}
       {...props}
     />
   );
 }
-

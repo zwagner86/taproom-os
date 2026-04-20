@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button, Card, Input, Label, Select } from "@taproom/ui";
+import { Badge, Button, Card, Input, Label, Select } from "@taproom/ui";
 
 import { createVenueAsPlatformAction } from "@/server/actions/venues";
 import { isPlatformAdmin, requireUser } from "@/server/auth";
@@ -25,66 +25,99 @@ export default async function InternalVenuesPage({
   const [venues, { error, message }] = await Promise.all([listVenuesForUser(user), searchParams]);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-12 lg:px-8">
-      <Card className="space-y-6">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Internal tools</p>
-          <h1 className="font-display text-4xl text-ink">Provision a venue</h1>
-          <p className="max-w-3xl text-sm leading-6 text-ink/65">
-            Operator-assisted is the MVP default. This screen creates the venue shell now and optionally attempts an
-            owner invite if you provide an email.
-          </p>
+    <main className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mb-7">
+        <div
+          className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
+          style={{ color: "var(--accent)" }}
+        >
+          Internal tools
         </div>
+        <h1 className="text-[28px] font-black tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+          Venue provisioning
+        </h1>
+        <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+          Create venue shells and optionally invite owners.
+        </p>
+      </div>
 
-        {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-        {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
 
-        <form action={createVenueAsPlatformAction} className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="venue-name">Venue name</Label>
-            <Input id="venue-name" name="name" placeholder="Driftline Cider House" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="venue-slug">Slug</Label>
-            <Input id="venue-slug" name="slug" placeholder="driftline-cider-house" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="venue-type">Venue type</Label>
-            <Select defaultValue="brewery" id="venue-type" name="venue_type">
-              <option value="brewery">Brewery</option>
-              <option value="cidery">Cidery</option>
-              <option value="meadery">Meadery</option>
-              <option value="distillery">Distillery</option>
-              <option value="taproom">Taproom</option>
-            </Select>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="owner-email">Owner email</Label>
-            <Input id="owner-email" name="owner_email" placeholder="owner@venue.com" type="email" />
-          </div>
-          <div className="md:col-span-2">
-            <Button type="submit">Create internal venue shell</Button>
-          </div>
-        </form>
-      </Card>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {venues.map((venue) => (
-          <Card className="space-y-4" key={venue.id}>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">{venue.venue_type}</p>
-              <h2 className="font-display text-2xl text-ink">{venue.name}</h2>
-              <p className="text-sm text-ink/55">/{venue.slug}</p>
+      <div className="grid grid-cols-[1fr_1.5fr] gap-6 items-start">
+        {/* Create form */}
+        <Card>
+          <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New venue shell</div>
+          <form action={createVenueAsPlatformAction} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="venue-name">Venue name <span style={{ color: "var(--accent)" }}>*</span></Label>
+              <Input id="venue-name" name="name" placeholder="Driftline Cider House" required />
             </div>
-            <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-5 text-sm font-semibold text-ink transition hover:border-ink/20"
-              href={`/internal/venues/${venue.slug}/impersonate` as Route}
-            >
-              Open venue shell
-            </Link>
-          </Card>
-        ))}
-      </section>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="venue-slug">Slug</Label>
+              <Input id="venue-slug" name="slug" placeholder="driftline-cider-house" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="venue-type">Venue type</Label>
+              <Select defaultValue="brewery" id="venue-type" name="venue_type">
+                <option value="brewery">Brewery</option>
+                <option value="cidery">Cidery</option>
+                <option value="meadery">Meadery</option>
+                <option value="distillery">Distillery</option>
+                <option value="taproom">Taproom</option>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="owner-email">Owner email</Label>
+              <Input id="owner-email" name="owner_email" placeholder="owner@venue.com" type="email" />
+            </div>
+            <Button type="submit">Create venue shell</Button>
+          </form>
+        </Card>
+
+        {/* Venues list */}
+        <div>
+          <div
+            className="text-[13px] font-bold uppercase tracking-[0.8px] mb-3"
+            style={{ color: "var(--c-muted)" }}
+          >
+            All venues · {venues.length}
+          </div>
+          {venues.length === 0 ? (
+            <Card>
+              <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>No venues provisioned yet.</p>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {venues.map((venue) => (
+                <Card key={venue.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                  <div>
+                    <div className="font-semibold text-[14px]" style={{ color: "var(--c-text)" }}>{venue.name}</div>
+                    <div className="text-[12px] mt-0.5" style={{ color: "var(--c-muted)" }}>
+                      /{venue.slug} · <Badge variant="info" style={{ fontSize: 11 }}>{venue.venue_type}</Badge>
+                    </div>
+                  </div>
+                  <Link
+                    className="inline-flex items-center rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition"
+                    href={`/internal/venues/${venue.slug}/impersonate` as Route}
+                    style={{ borderColor: "var(--c-border)", color: "var(--c-text)" }}
+                  >
+                    Open →
+                  </Link>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

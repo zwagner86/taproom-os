@@ -35,7 +35,7 @@ The repo currently implements:
 ## Quick start
 
 1. Copy `.env.example` to `.env.local`.
-2. Create a Supabase project and set the public URL, anon key, and service-role key.
+2. Create a Supabase project and set the public URL, publishable key, and secret key.
 3. Apply the SQL in `supabase/migrations` to your Supabase database in order.
 4. Optionally run `supabase/seed.sql` for the demo venue and public menu data.
 5. Install dependencies with `pnpm install`.
@@ -55,6 +55,8 @@ The repo currently implements:
 
 - The local web build is pinned to `next build --webpack` because that validated cleanly in this environment.
 - `opennextjs-cloudflare build` and deployment notes are documented in [docs/deployment-cloudflare.md](/Users/zacharywagner/code/taproom-os/docs/deployment-cloudflare.md).
-- Stripe uses `Standard + direct charges` in this MVP.
+- Supabase uses the publishable key for public/browser/SSR auth flows and the secret key for server-only admin actions in this repo.
+- Stripe uses `Standard + direct charges` in this MVP, but it stays optional until a venue wants paid memberships or paid event ticketing.
+- Venues without Stripe can still run menus, free events, check-in, followers, displays, and Square-linked catalog syncing. Each venue connects or creates its own Stripe account before selling paid commerce.
 - Square remains read-only and link-based: TaproomOS items stay canonical, and Square supplies snapshot pricing/availability.
 - Refunds are full-refund only in MVP.

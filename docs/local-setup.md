@@ -12,8 +12,8 @@ Copy `.env.example` to `.env.local` and fill in:
 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
 - `PLATFORM_ADMIN_EMAILS`
 - `APP_ENCRYPTION_KEY`
 
@@ -46,6 +46,8 @@ Apply the files in `supabase/migrations` in order:
 
 Optional: run `supabase/seed.sql` to get the `demo-taproom` public venue immediately.
 
+If `0003_events.sql` failed previously while applying, the Supabase CLI usually does not record it as applied. Re-run from `0003` after fixing the file. If the failed attempt left partial objects behind, clean up only `events`, `event_bookings`, `event_check_in_sessions`, and `check_in_events`, then continue with `0004` onward.
+
 ## Development flow
 
 - `pnpm install`
@@ -53,7 +55,9 @@ Optional: run `supabase/seed.sql` to get the `demo-taproom` public venue immedia
 - Visit `/signup` to create an operator account.
 - Visit `/onboarding` to create a venue as the signed-in user.
 - If your email is listed in `PLATFORM_ADMIN_EMAILS`, use `/internal/venues` for operator-assisted venue provisioning.
-- Connect Stripe from `/app/[venue]/billing` and Square from `/app/[venue]/integrations/square`.
+- Stripe is optional for menus, free events, followers, displays, and Square-linked catalog syncing.
+- Use `/app/[venue]/billing` when you want to connect or create the venue's Stripe account for paid events or memberships.
+- Connect Square from `/app/[venue]/integrations/square`.
 - Use `/app/[venue]/events`, `/app/[venue]/memberships`, `/app/[venue]/notifications`, and `/app/[venue]/followers` to exercise the rest of the MVP.
 
 ## Verification

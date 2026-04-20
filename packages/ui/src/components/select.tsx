@@ -6,11 +6,11 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   return (
     <select
       className={cn(
-        "min-h-11 w-full rounded-2xl border border-ink/10 bg-mist/50 px-4 text-sm text-ink focus:border-ember/40 focus:outline-none focus:ring-2 focus:ring-ember/20",
+        "w-full rounded-lg border border-rim bg-white px-3 py-[9px] text-sm text-ink cursor-pointer",
+        "focus:border-ember focus:outline-none transition-colors",
         className,
       )}
       {...props}
     />
   );
 }
-

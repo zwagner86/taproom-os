@@ -24,29 +24,40 @@ export default async function ImpersonateVenuePage({ params }: { params: Promise
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 lg:px-8">
-      <Card className="space-y-6">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Internal impersonation</p>
-          <h1 className="font-display text-4xl text-ink">{venue.name}</h1>
-          <p className="text-sm leading-6 text-ink/65">
-            Platform admins can open any venue shell directly in MVP. Dedicated impersonation audit tooling is
-            deferred, but this route preserves the intended workflow and handoff point.
-          </p>
+    <main className="mx-auto max-w-2xl px-6 py-10">
+      <div className="mb-7">
+        <div
+          className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
+          style={{ color: "var(--accent)" }}
+        >
+          Platform admin · Impersonation
         </div>
+        <h1 className="text-[28px] font-black tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+          {venue.name}
+        </h1>
+        <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+          /{venue.slug} · {venue.venue_type}
+        </p>
+      </div>
+
+      <Card>
+        <p className="text-[13.5px] mb-5 leading-relaxed" style={{ color: "var(--c-muted)" }}>
+          Platform admins can open any venue shell directly. Dedicated impersonation audit tooling is deferred,
+          but this route preserves the intended workflow and handoff point.
+        </p>
 
         <div className="flex flex-wrap gap-3">
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-5 text-sm font-semibold text-parchment shadow-panel transition hover:bg-pine/90"
-            href={`/app/${venue.slug}/setup` as Route}
-          >
-            Open setup
+          <Link href={`/app/${venue.slug}/setup` as Route}>
+            <Button>Open setup</Button>
           </Link>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white px-5 text-sm font-semibold text-ink transition hover:border-ink/20"
-            href={`/app/${venue.slug}/items` as Route}
-          >
-            Jump to items
+          <Link href={`/app/${venue.slug}/items` as Route}>
+            <Button variant="secondary">Jump to items</Button>
+          </Link>
+          <Link href={`/app/${venue.slug}/events` as Route}>
+            <Button variant="secondary">Events</Button>
+          </Link>
+          <Link href={`/app/${venue.slug}/billing` as Route}>
+            <Button variant="secondary">Billing</Button>
           </Link>
         </div>
       </Card>

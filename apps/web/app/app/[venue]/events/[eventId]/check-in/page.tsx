@@ -1,13 +1,14 @@
 export const dynamic = "force-dynamic";
 
 import { sortBookingsForCheckIn } from "@taproom/domain";
-import { Button, Card, Input, Label } from "@taproom/ui";
+import { Badge, Button, Card, Input, Label } from "@taproom/ui";
 import { notFound } from "next/navigation";
 
 import { getEnv } from "@/env";
 import { adjustCheckInAction, createCheckInSessionAction } from "@/server/actions/events";
 import { getCheckInSessionForEvent, getVenueEventById, listEventBookings } from "@/server/repositories/events";
 import { requireVenueAccess } from "@/server/repositories/venues";
+import { formatDate } from "@/lib/utils";
 
 export default async function VenueCheckInPage({
   params,
@@ -42,98 +43,154 @@ export default async function VenueCheckInPage({
     })),
   );
 
+  const checkedInTotal = bookings.reduce((t, b) => t + b.checked_in_count, 0);
+  const totalBooked = bookings.reduce((t, b) => t + b.party_size, 0);
+
   return (
-    <div className="space-y-6">
-      <Card className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Check-in</p>
-          <h1 className="font-display text-4xl text-ink">{event.title}</h1>
-          <p className="text-sm leading-6 text-ink/65">
-            Use a live guest list instead of scanning tickets. Partial attendance is supported for large parties.
+    <div>
+      <div className="flex items-start justify-between mb-7 gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+            {event.title}
+          </h1>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+            Check-in · {formatDate(event.starts_at)} · {checkedInTotal}/{totalBooked} checked in
           </p>
         </div>
-        {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-        {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
-      </Card>
+      </div>
 
-      <Card className="space-y-4">
-        <div className="space-y-2">
-          <h2 className="font-display text-2xl text-ink">Shared session</h2>
-          <p className="text-sm leading-6 text-ink/65">
-            Create one session per event and hand the link to staff running the door. PIN is optional.
-          </p>
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
         </div>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
 
+      {/* Shared session */}
+      <Card style={{ marginBottom: 20 }}>
+        <div className="text-sm font-semibold mb-3" style={{ color: "var(--c-text)" }}>Shared door session</div>
+        <p className="text-[13px] mb-4" style={{ color: "var(--c-muted)" }}>
+          Create one session per event and share the link with door staff. PIN is optional.
+        </p>
         {session ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-3xl bg-mist/40 p-4 text-sm text-ink/70">
-              <p className="font-semibold text-ink">Shared link</p>
-              <p className="break-all">{`${getEnv().NEXT_PUBLIC_APP_URL}/check-in/${session.token}`}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div
+              className="rounded-lg px-3 py-2.5"
+              style={{ background: "var(--c-bg2)" }}
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-[0.6px] mb-1" style={{ color: "var(--c-muted)" }}>Shared link</div>
+              <div className="text-[13px] break-all" style={{ color: "var(--c-text)" }}>
+                {`${getEnv().NEXT_PUBLIC_APP_URL}/check-in/${session.token}`}
+              </div>
             </div>
-            <div className="rounded-3xl bg-mist/40 p-4 text-sm text-ink/70">
-              <p className="font-semibold text-ink">PIN</p>
-              <p>{session.pin ?? "No PIN required"}</p>
+            <div
+              className="rounded-lg px-3 py-2.5"
+              style={{ background: "var(--c-bg2)" }}
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-[0.6px] mb-1" style={{ color: "var(--c-muted)" }}>PIN</div>
+              <div className="text-[13px]" style={{ color: "var(--c-text)" }}>
+                {session.pin ?? "No PIN required"}
+              </div>
             </div>
           </div>
         ) : (
-          <form action={createSessionAction} className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+          <form action={createSessionAction} className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="session-name">Session name</Label>
               <Input defaultValue="Shared check-in" id="session-name" name="session_name" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="session-pin">PIN</Label>
-              <Input id="session-pin" name="pin" placeholder="Optional" />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="session-pin">PIN (optional)</Label>
+              <Input id="session-pin" name="pin" placeholder="Leave blank for no PIN" />
             </div>
-            <div className="md:col-span-2">
+            <div className="col-span-2">
               <Button type="submit">Create shared session</Button>
             </div>
           </form>
         )}
       </Card>
 
-      <section className="grid gap-3">
-        {sortedBookings.map((booking) => (
-          <Card className="space-y-4" key={booking.id}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-2xl text-ink">{booking.purchaser_name}</h2>
-                <p className="text-sm text-ink/60">
-                  Party of {booking.party_size} · Checked in {booking.checked_in_count}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <form action={updateAction}>
-                <input name="booking_id" type="hidden" value={booking.id} />
-                <input name="delta" type="hidden" value="1" />
-                <Button type="submit">+1</Button>
-              </form>
-              <form action={updateAction}>
-                <input name="booking_id" type="hidden" value={booking.id} />
-                <input name="delta" type="hidden" value="all" />
-                <Button type="submit" variant="secondary">
-                  +All Remaining
-                </Button>
-              </form>
-              <form action={updateAction}>
-                <input name="booking_id" type="hidden" value={booking.id} />
-                <input name="delta" type="hidden" value="-1" />
-                <Button type="submit" variant="ghost">
-                  Undo 1
-                </Button>
-              </form>
-            </div>
-          </Card>
-        ))}
-
-        {sortedBookings.length === 0 ? (
-          <Card>
-            <p className="text-sm leading-6 text-ink/65">No bookings yet for this event.</p>
-          </Card>
-        ) : null}
-      </section>
+      {/* Guest list */}
+      <div
+        className="text-[13px] font-bold uppercase tracking-[0.8px] mb-3"
+        style={{ color: "var(--c-muted)" }}
+      >
+        Guest list · {bookings.length} bookings
+      </div>
+      {sortedBookings.length === 0 ? (
+        <Card>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>No bookings yet for this event.</p>
+        </Card>
+      ) : (
+        <Card style={{ padding: 0 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+            <thead>
+              <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
+                {["Guest", "Party", "Checked in", "Actions"].map((h) => (
+                  <th
+                    key={h}
+                    style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--c-muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedBookings.map((booking, i) => {
+                const remaining = booking.party_size - booking.checked_in_count;
+                return (
+                  <tr
+                    key={booking.id}
+                    style={{ borderBottom: i < sortedBookings.length - 1 ? "1px solid var(--c-border)" : "none" }}
+                  >
+                    <td style={{ padding: "11px 12px" }}>
+                      <div className="font-semibold" style={{ color: "var(--c-text)" }}>{booking.purchaser_name}</div>
+                    </td>
+                    <td style={{ padding: "11px 12px", color: "var(--c-muted)", fontSize: 13 }}>
+                      {booking.party_size}
+                    </td>
+                    <td style={{ padding: "11px 12px" }}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={booking.checked_in_count === booking.party_size ? "success" : booking.checked_in_count > 0 ? "warning" : "default"}>
+                          {booking.checked_in_count} / {booking.party_size}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td style={{ padding: "11px 12px" }}>
+                      <div className="flex gap-1.5 flex-wrap">
+                        <form action={updateAction}>
+                          <input name="booking_id" type="hidden" value={booking.id} />
+                          <input name="delta" type="hidden" value="1" />
+                          <Button disabled={remaining <= 0} size="sm" type="submit">+1</Button>
+                        </form>
+                        {remaining > 1 && (
+                          <form action={updateAction}>
+                            <input name="booking_id" type="hidden" value={booking.id} />
+                            <input name="delta" type="hidden" value="all" />
+                            <Button size="sm" type="submit" variant="secondary">+All ({remaining})</Button>
+                          </form>
+                        )}
+                        {booking.checked_in_count > 0 && (
+                          <form action={updateAction}>
+                            <input name="booking_id" type="hidden" value={booking.id} />
+                            <input name="delta" type="hidden" value="-1" />
+                            <Button size="sm" type="submit" variant="ghost" style={{ color: "var(--c-muted)" }}>Undo</Button>
+                          </form>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 }

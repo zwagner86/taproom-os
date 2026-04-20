@@ -8,7 +8,7 @@ export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
   const env = getEnv();
 
-  return createServerClient<any>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  return createServerClient<any>(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -27,11 +27,11 @@ export async function createServerSupabaseClient() {
 export async function createAdminSupabaseClient() {
   const env = getEnv();
 
-  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for admin actions.");
+  if (!env.SUPABASE_SECRET_KEY) {
+    throw new Error("SUPABASE_SECRET_KEY is required for admin actions.");
   }
 
-  return createClient<any>(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient<any>(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SECRET_KEY, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

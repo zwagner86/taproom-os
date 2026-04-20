@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Card } from "@taproom/ui";
+import { Badge, Card } from "@taproom/ui";
 
 import { listVenueFollowers } from "@/server/repositories/followers";
 import { requireVenueAccess } from "@/server/repositories/venues";
@@ -9,59 +9,106 @@ export default async function VenueFollowersPage({ params }: { params: Promise<{
   const { venue } = await params;
   const { venue: venueRecord } = await requireVenueAccess(venue);
   const followers = await listVenueFollowers(venueRecord.id);
-  const emailCount = followers.filter(
-    (follower) => Array.isArray(follower.channel_preferences) && follower.channel_preferences.includes("email"),
+  const activeFollowers = followers.filter((f) => f.active);
+  const emailCount = activeFollowers.filter(
+    (f) => Array.isArray(f.channel_preferences) && f.channel_preferences.includes("email"),
   ).length;
-  const smsCount = followers.filter(
-    (follower) => Array.isArray(follower.channel_preferences) && follower.channel_preferences.includes("sms"),
+  const smsCount = activeFollowers.filter(
+    (f) => Array.isArray(f.channel_preferences) && f.channel_preferences.includes("sms"),
   ).length;
 
   return (
-    <div className="space-y-6">
-      <Card className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Followers</p>
-          <h1 className="font-display text-4xl text-ink">Audience list</h1>
-          <p className="max-w-3xl text-sm leading-6 text-ink/65">
-            Public follow forms feed this lightweight audience list. It stays deliberately simple in MVP: email, SMS,
-            consent time, and active state.
+    <div>
+      <div className="flex items-start justify-between mb-7 gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+            Followers
+          </h1>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+            Opted-in fans who want to hear from you.
           </p>
         </div>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="space-y-2">
-          <p className="text-sm font-semibold text-ink">Total followers</p>
-          <p className="font-display text-4xl text-ink">{followers.length}</p>
-        </Card>
-        <Card className="space-y-2">
-          <p className="text-sm font-semibold text-ink">Email opted in</p>
-          <p className="font-display text-4xl text-ink">{emailCount}</p>
-        </Card>
-        <Card className="space-y-2">
-          <p className="text-sm font-semibold text-ink">SMS opted in</p>
-          <p className="font-display text-4xl text-ink">{smsCount}</p>
-        </Card>
       </div>
 
-      <Card className="space-y-4">
-        {followers.length === 0 ? (
-          <p className="text-sm leading-6 text-ink/65">No followers yet. Public menu, event, and membership pages now include follow capture.</p>
-        ) : (
-          <div className="grid gap-3">
-            {followers.map((follower) => (
-              <div className="rounded-3xl border border-ink/10 bg-mist/35 p-4" key={follower.id}>
-                <p className="font-semibold text-ink">{follower.email ?? follower.phone ?? "Unknown contact"}</p>
-                <p className="text-sm text-ink/60">
-                  Channels:{" "}
-                  {Array.isArray(follower.channel_preferences) ? follower.channel_preferences.join(", ") || "none" : "none"}
-                </p>
-                <p className="text-sm text-ink/55">Consented {new Date(follower.consented_at).toLocaleString()}</p>
-              </div>
-            ))}
+      {/* Stat cards */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[
+          { label: "Total followers", value: activeFollowers.length, icon: "👥" },
+          { label: "Email opt-in", value: emailCount, icon: "✉️" },
+          { label: "SMS opt-in", value: smsCount, icon: "📱" },
+        ].map((s) => (
+          <Card key={s.label} style={{ padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ fontSize: 28 }}>{s.icon}</div>
+            <div>
+              <div className="text-[26px] font-black" style={{ color: "var(--c-text)" }}>{s.value}</div>
+              <div className="text-xs" style={{ color: "var(--c-muted)" }}>{s.label}</div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Table */}
+      {followers.length === 0 ? (
+        <Card>
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+            <div style={{ fontSize: 32 }}>📭</div>
+            <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No followers yet</div>
+            <div className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
+              Public menu, event, and membership pages include follow capture.
+            </div>
           </div>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <Card style={{ padding: 0 }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+              <thead>
+                <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
+                  {["Email", "Phone", "Channels", "Opted in", "Status"].map((h) => (
+                    <th
+                      key={h}
+                      style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--c-muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {followers.map((follower, i) => (
+                  <tr
+                    key={follower.id}
+                    style={{ borderBottom: i < followers.length - 1 ? "1px solid var(--c-border)" : "none" }}
+                  >
+                    <td style={{ padding: "11px 12px", fontWeight: 500, color: "var(--c-text)" }}>
+                      {follower.email ?? "—"}
+                    </td>
+                    <td style={{ padding: "11px 12px", color: "var(--c-muted)" }}>
+                      {follower.phone ?? "—"}
+                    </td>
+                    <td style={{ padding: "11px 12px" }}>
+                      <div className="flex gap-1 flex-wrap">
+                        {Array.isArray(follower.channel_preferences) &&
+                          follower.channel_preferences.map((c: string) => (
+                            <Badge key={c} variant={c === "email" ? "info" : "accent"}>{c}</Badge>
+                          ))}
+                      </div>
+                    </td>
+                    <td style={{ padding: "11px 12px", color: "var(--c-muted)", fontSize: 13 }}>
+                      {new Date(follower.consented_at).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: "11px 12px" }}>
+                      <Badge variant={follower.active ? "success" : "default"}>
+                        {follower.active ? "Active" : "Inactive"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

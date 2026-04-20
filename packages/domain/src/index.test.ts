@@ -6,6 +6,7 @@ import {
   calculateApplicationFee,
   canResumeMembership,
   followerPrefersChannel,
+  resolveVenuePaymentCapability,
   resolveDisplayedPrice,
   resolveTerminology,
   sortBookingsForCheckIn,
@@ -71,5 +72,66 @@ describe("domain helpers", () => {
         status: "active",
       }),
     ).toBe(false);
+  });
+
+  it("marks venues without Stripe as not connected for paid commerce", () => {
+    expect(resolveVenuePaymentCapability(null)).toEqual({
+      blockingReason: "Connect or create your Stripe account to enable paid ticket sales and membership subscriptions.",
+      canIssueRefunds: false,
+      canSellMemberships: false,
+      canSellPaidEvents: false,
+      status: "not_connected",
+    });
+  });
+
+  it("marks incomplete Stripe onboarding separately from a hard restriction", () => {
+    expect(
+      resolveVenuePaymentCapability({
+        chargesEnabled: false,
+        detailsSubmitted: true,
+        lastError: null,
+        status: "pending",
+        stripeAccountId: "acct_pending",
+      }),
+    ).toEqual({
+      blockingReason: "Finish Stripe onboarding before enabling paid ticket sales, membership subscriptions, or TaproomOS refunds.",
+      canIssueRefunds: false,
+      canSellMemberships: false,
+      canSellPaidEvents: false,
+      status: "onboarding_incomplete",
+    });
+    expect(
+      resolveVenuePaymentCapability({
+        chargesEnabled: false,
+        detailsSubmitted: false,
+        lastError: "Verification needed",
+        status: "error",
+        stripeAccountId: "acct_restricted",
+      }),
+    ).toEqual({
+      blockingReason: "Verification needed",
+      canIssueRefunds: false,
+      canSellMemberships: false,
+      canSellPaidEvents: false,
+      status: "restricted",
+    });
+  });
+
+  it("marks fully onboarded connected accounts as ready", () => {
+    expect(
+      resolveVenuePaymentCapability({
+        chargesEnabled: true,
+        detailsSubmitted: true,
+        lastError: null,
+        status: "active",
+        stripeAccountId: "acct_ready",
+      }),
+    ).toEqual({
+      blockingReason: null,
+      canIssueRefunds: true,
+      canSellMemberships: true,
+      canSellPaidEvents: true,
+      status: "ready",
+    });
   });
 });

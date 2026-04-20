@@ -1,10 +1,13 @@
 export const dynamic = "force-dynamic";
 
-import { Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
+import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
 
 import { createItemAction, deleteItemAction, updateItemAction } from "@/server/actions/items";
 import { listVenueItems } from "@/server/repositories/items";
 import { requireVenueAccess } from "@/server/repositories/venues";
+
+const TYPE_EMOJI: Record<string, string> = { pour: "🍺", food: "🥨", merch: "👕", event: "🎟" };
+const TYPE_LABELS: Record<string, string> = { pour: "Pour", food: "Food", merch: "Merch", event: "Event" };
 
 export default async function VenueItemsPage({
   params,
@@ -19,139 +22,182 @@ export default async function VenueItemsPage({
     searchParams,
   ]);
   const items = await listVenueItems(venueRecord.id);
+  const activeCount = items.filter((i) => i.active).length;
 
   const createAction = createItemAction.bind(null, venue);
   const updateAction = updateItemAction.bind(null, venue);
   const deleteAction = deleteItemAction.bind(null, venue);
 
   return (
-    <div className="space-y-6">
-      <Card className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Unified item model</p>
-          <h1 className="font-display text-4xl text-ink">{venueRecord.menu_label}</h1>
-          <p className="max-w-2xl text-sm leading-6 text-ink/65">
-            Update once here and the same content flows to public menu pages, embeds, and the venue TV screen.
+    <div>
+      {/* Page header */}
+      <div className="flex items-start justify-between mb-7 gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+            Item Management
+          </h1>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+            {venueRecord.menu_label} — {activeCount} active items
           </p>
         </div>
-        {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-        {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
-      </Card>
+      </div>
 
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
+
+      {/* Items list */}
+      {items.length > 0 && (
+        <Card style={{ padding: 0, marginBottom: 20 }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+              <thead>
+                <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
+                  {["Item", "Type", "ABV / Category", "Status", "Actions"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "left",
+                        fontWeight: 600,
+                        color: "var(--c-muted)",
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderBottom: i < items.length - 1 ? "1px solid var(--c-border)" : "none",
+                      background: i % 2 !== 0 ? "oklch(98.5% 0.004 75)" : "transparent",
+                    }}
+                  >
+                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
+                      <div className="flex items-center gap-2.5">
+                        <span style={{ fontSize: 16 }}>{TYPE_EMOJI[item.type] ?? "•"}</span>
+                        <div>
+                          <div
+                            className="font-semibold"
+                            style={{ color: item.active ? "var(--c-text)" : "var(--c-muted)" }}
+                          >
+                            {item.name}
+                          </div>
+                          {item.description && (
+                            <div
+                              className="text-[11.5px] mt-px truncate max-w-[200px]"
+                              style={{ color: "var(--c-muted)" }}
+                            >
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
+                      <Badge variant="info">{TYPE_LABELS[item.type] ?? item.type}</Badge>
+                    </td>
+                    <td style={{ padding: "11px 12px", verticalAlign: "middle", color: "var(--c-muted)", fontSize: 13 }}>
+                      {[item.style_or_category, item.abv ? `${item.abv}% ABV` : null].filter(Boolean).join(" · ") || "—"}
+                    </td>
+                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
+                      <Badge variant={item.active ? "success" : "default"}>
+                        {item.active ? "Active" : "Hidden"}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
+                      <div className="flex gap-1.5">
+                        <form action={updateAction}>
+                          <input name="item_id" type="hidden" value={item.id} />
+                          <input name="name" type="hidden" value={item.name} />
+                          <input name="type" type="hidden" value={item.type} />
+                          <input name="active" type="hidden" value={item.active ? "" : "on"} />
+                          <Button size="sm" type="submit" variant={item.active ? "secondary" : "success"}>
+                            {item.active ? "Hide" : "Show"}
+                          </Button>
+                        </form>
+                        <form action={deleteAction}>
+                          <input name="item_id" type="hidden" value={item.id} />
+                          <Button size="sm" type="submit" variant="ghost" style={{ color: "var(--c-muted)" }}>
+                            Del
+                          </Button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {items.length === 0 && (
+        <Card style={{ marginBottom: 20 }}>
+          <div
+            className="flex flex-col items-center justify-center py-16 gap-3 text-center"
+          >
+            <div style={{ fontSize: 36 }}>🍺</div>
+            <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No items</div>
+            <div className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
+              Add your first tap, food item, or merch below.
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Add item form */}
       <Card>
-        <form action={createAction} className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="create-name">Item name</Label>
-            <Input id="create-name" name="name" placeholder="Foamline IPA" required />
+        <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Add item</div>
+        <form action={createAction} className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-name">Name <span style={{ color: "var(--accent)" }}>*</span></Label>
+              <Input id="create-name" name="name" placeholder="Ironwood IPA" required />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-type">Type</Label>
+              <Select defaultValue="pour" id="create-type" name="type">
+                <option value="pour">Pour</option>
+                <option value="food">Food</option>
+                <option value="merch">Merch</option>
+                <option value="event">Event listing</option>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-type">Type</Label>
-            <Select defaultValue="pour" id="create-type" name="type">
-              <option value="pour">Pour</option>
-              <option value="food">Food</option>
-              <option value="merch">Merch</option>
-              <option value="event">Event listing</option>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-style">Style / Category</Label>
+              <Input id="create-style" name="style_or_category" placeholder="IPA, Stout…" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="create-abv">ABV (%)</Label>
+              <Input id="create-abv" name="abv" placeholder="6.7" step="0.1" type="number" />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-style">Style or category</Label>
-            <Input id="create-style" name="style_or_category" placeholder="West Coast IPA" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-abv">ABV</Label>
-            <Input id="create-abv" name="abv" placeholder="6.7" step="0.1" type="number" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-order">Display order</Label>
-            <Input defaultValue="0" id="create-order" name="display_order" type="number" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="create-image">Image URL</Label>
-            <Input id="create-image" name="image_url" placeholder="https://..." type="url" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
+          <div className="flex flex-col gap-1">
             <Label htmlFor="create-description">Description</Label>
-            <Textarea id="create-description" name="description" placeholder="Short tasting note or menu copy" />
+            <Textarea id="create-description" name="description" placeholder="Short tasting note or menu copy" rows={2} />
           </div>
-          <div className="md:col-span-2">
-            <Button type="submit">Add item</Button>
+          <div className="flex gap-2 mt-1">
+            <Button type="submit">+ Add item</Button>
           </div>
         </form>
       </Card>
-
-      <section className="grid gap-4">
-        {items.map((item) => (
-          <Card className="space-y-4" key={item.id}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">{item.type}</p>
-                <h2 className="font-display text-2xl text-ink">{item.name}</h2>
-              </div>
-              <p className="text-sm text-ink/55">{item.active ? "Active" : "Hidden"}</p>
-            </div>
-
-            <form action={updateAction} className="grid gap-4 md:grid-cols-2">
-              <input name="item_id" type="hidden" value={item.id} />
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor={`name-${item.id}`}>Name</Label>
-                <Input defaultValue={item.name} id={`name-${item.id}`} name="name" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`type-${item.id}`}>Type</Label>
-                <Select defaultValue={item.type} id={`type-${item.id}`} name="type">
-                  <option value="pour">Pour</option>
-                  <option value="food">Food</option>
-                  <option value="merch">Merch</option>
-                  <option value="event">Event listing</option>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`style-${item.id}`}>Style or category</Label>
-                <Input defaultValue={item.style_or_category ?? ""} id={`style-${item.id}`} name="style_or_category" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`abv-${item.id}`}>ABV</Label>
-                <Input defaultValue={item.abv ?? ""} id={`abv-${item.id}`} name="abv" step="0.1" type="number" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`order-${item.id}`}>Display order</Label>
-                <Input defaultValue={item.display_order} id={`order-${item.id}`} name="display_order" type="number" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor={`image-${item.id}`}>Image URL</Label>
-                <Input defaultValue={item.image_url ?? ""} id={`image-${item.id}`} name="image_url" type="url" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor={`description-${item.id}`}>Description</Label>
-                <Textarea defaultValue={item.description ?? ""} id={`description-${item.id}`} name="description" />
-              </div>
-              <label className="inline-flex items-center gap-3 text-sm font-semibold text-ink/70">
-                <input defaultChecked={item.active} name="active" type="checkbox" />
-                Show on public surfaces
-              </label>
-              <div className="flex flex-wrap gap-3 md:col-span-2">
-                <Button type="submit">Save item</Button>
-              </div>
-            </form>
-
-            <form action={deleteAction}>
-              <input name="item_id" type="hidden" value={item.id} />
-              <Button type="submit" variant="ghost">
-                Remove item
-              </Button>
-            </form>
-          </Card>
-        ))}
-
-        {items.length === 0 ? (
-          <Card>
-            <p className="text-sm leading-6 text-ink/65">
-              No items yet. Add your first pour, food item, merch record, or event placeholder above.
-            </p>
-          </Card>
-        ) : null}
-      </section>
     </div>
   );
 }
-

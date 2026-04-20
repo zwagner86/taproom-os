@@ -9,9 +9,9 @@ import { getOptionalUser, isPlatformAdmin } from "@/server/auth";
 import { listVenuesForUser } from "@/server/repositories/venues";
 
 const highlights = [
-  "Unified content model for pours, food, merch, and events",
-  "Cloudflare-ready Next.js runtime with Supabase-backed tenancy",
-  "Admin, embed, public, and TV outputs from one venue record",
+  { icon: "🍺", text: "Unified content model for pours, food, merch, and events" },
+  { icon: "⚡️", text: "Cloudflare-ready Next.js with Supabase-backed tenancy" },
+  { icon: "📺", text: "Admin, embed, public, and TV display outputs from one venue record" },
 ];
 
 export default async function HomePage() {
@@ -19,51 +19,52 @@ export default async function HomePage() {
 
   if (!user) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-12 lg:px-8 lg:py-20">
-        <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
-            <Badge>Cloudflare + Supabase + Stripe Connect</Badge>
-            <div className="space-y-4">
-              <h1 className="max-w-3xl font-display text-5xl leading-tight text-ink sm:text-6xl">
-                The operating layer for taprooms that rotate fast and stay simple.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-ink/70">
-                TaproomOS is opinionated around pours, events, memberships, and public display surfaces. No kitchen
-                workflows, no restaurant-ordering sprawl, no POS replacement.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-6 text-sm font-semibold text-parchment shadow-panel transition hover:bg-pine/90"
-                href="/signup"
-              >
-                Create operator account
+      <main className="mx-auto max-w-5xl px-5 py-16">
+        <div className="grid grid-cols-[1.1fr_0.9fr] gap-8 items-start">
+          <div>
+            <Badge variant="info" style={{ marginBottom: 16 }}>Cloudflare · Supabase · Stripe Connect</Badge>
+            <h1
+              className="text-[52px] font-black tracking-[-1.5px] leading-[1.08] mb-5"
+              style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}
+            >
+              The operating layer for taprooms that rotate fast.
+            </h1>
+            <p className="text-[16px] leading-relaxed mb-8" style={{ color: "var(--c-muted)" }}>
+              TaproomOS is opinionated around pours, events, memberships, and public display surfaces. No kitchen
+              workflows, no restaurant-ordering sprawl, no POS replacement.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              <Link href="/signup">
+                <Button size="lg">Create operator account</Button>
               </Link>
-              <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/80 px-6 text-sm font-semibold text-ink transition hover:border-ink/20 hover:bg-white"
-                href="/v/demo-taproom/menu"
-              >
-                View demo venue
+              <Link href="/v/demo-taproom/menu">
+                <Button size="lg" variant="secondary">View demo venue</Button>
               </Link>
             </div>
           </div>
 
-          <Card className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">MVP working slice</p>
-            <div className="space-y-3">
-              {highlights.map((highlight) => (
-                <div className="rounded-3xl bg-mist/50 px-4 py-4 text-sm leading-6 text-ink/70" key={highlight}>
-                  {highlight}
+          <Card>
+            <div className="text-[11px] font-bold uppercase tracking-[0.8px] mb-4" style={{ color: "var(--accent)" }}>
+              What's included
+            </div>
+            <div className="flex flex-col gap-3">
+              {highlights.map((h) => (
+                <div
+                  key={h.text}
+                  className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-[13.5px] leading-relaxed"
+                  style={{ background: "var(--c-bg2)", color: "var(--c-muted)" }}
+                >
+                  <span className="text-[16px] flex-shrink-0">{h.icon}</span>
+                  {h.text}
                 </div>
               ))}
             </div>
-            <p className="text-sm leading-6 text-ink/60">
-              Use the seeded `demo-taproom` venue for public page previews, then connect a real Supabase project to
-              create operator accounts and venue records.
-            </p>
+            <div className="mt-4 text-[12.5px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+              Use the seeded <code className="font-mono text-[11.5px]">demo-taproom</code> venue for public page previews,
+              then connect a real Supabase project to create operator accounts.
+            </div>
           </Card>
-        </section>
+        </div>
       </main>
     );
   }
@@ -71,77 +72,72 @@ export default async function HomePage() {
   const [venues, admin] = await Promise.all([listVenuesForUser(user), isPlatformAdmin()]);
 
   return (
-    <main className="mx-auto max-w-7xl space-y-8 px-4 py-12 lg:px-8">
-      <section className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <Badge>Operator dashboard</Badge>
-          <h1 className="font-display text-4xl text-ink">Welcome back.</h1>
-          <p className="max-w-2xl text-base leading-7 text-ink/65">
-            Start with venue setup and items, then grow into events, memberships, notifications, and Square sync.
+    <main className="mx-auto max-w-5xl px-5 py-10">
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-[28px] font-black tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+            Welcome back.
+          </h1>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+            Start with venue setup and items, then grow into events, memberships, and notifications.
           </p>
         </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/80 px-5 text-sm font-semibold text-ink transition hover:border-ink/20 hover:bg-white"
-            href="/onboarding"
-          >
-            Create a venue
+        <div className="flex gap-3 flex-shrink-0">
+          <Link href="/onboarding">
+            <Button variant="secondary">+ New venue</Button>
           </Link>
-          {admin ? (
-            <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-5 text-sm font-semibold text-parchment shadow-panel transition hover:bg-pine/90"
-              href="/internal/venues"
-            >
-              Internal venue tools
+          {admin && (
+            <Link href="/internal/venues">
+              <Button variant="ghost">Internal tools</Button>
             </Link>
-          ) : null}
+          )}
         </div>
-      </section>
+      </div>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {venues.map((venue) => (
-          <Card className="space-y-4" key={venue.id}>
-            <div className="space-y-1">
-              <Badge>{venue.venue_type}</Badge>
-              <h2 className="font-display text-2xl text-ink">{venue.name}</h2>
-              <p className="text-sm text-ink/55">/{venue.slug}</p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Link
-                className="rounded-2xl bg-pine px-4 py-3 text-center text-sm font-semibold text-parchment transition hover:bg-pine/90"
-                href={`/app/${venue.slug}/items` as Route}
-              >
-                Manage items
-              </Link>
-              <Link
-                className="rounded-2xl border border-ink/10 bg-white px-4 py-3 text-center text-sm font-semibold text-ink transition hover:border-ink/20"
-                href={`/v/${venue.slug}/menu` as Route}
-              >
-                View public menu
-              </Link>
-            </div>
-          </Card>
-        ))}
-
-        {venues.length === 0 ? (
-          <Card className="space-y-4 md:col-span-2 xl:col-span-3">
-            <h2 className="font-display text-2xl text-ink">No venues yet</h2>
-            <p className="max-w-2xl text-sm leading-6 text-ink/65">
+      {venues.length === 0 ? (
+        <Card>
+          <div className="py-12 flex flex-col items-center text-center gap-4">
+            <div className="text-[40px]">🏠</div>
+            <div className="font-bold text-[17px]" style={{ color: "var(--c-text)" }}>No venues yet</div>
+            <p className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
               Create a venue to start configuring terminology, branding, and the rotating taproom menu.
             </p>
-            <div>
-              <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-pine px-5 text-sm font-semibold text-parchment shadow-panel transition hover:bg-pine/90"
-                href="/onboarding"
-              >
-                Launch venue onboarding
-              </Link>
-            </div>
-          </Card>
-        ) : null}
-      </section>
+            <Link href="/onboarding">
+              <Button>Launch venue onboarding</Button>
+            </Link>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {venues.map((venue) => (
+            <Card key={venue.id}>
+              <div className="mb-4">
+                <Badge variant="info" style={{ marginBottom: 8, fontSize: 11 }}>{venue.venue_type}</Badge>
+                <div className="font-bold text-[17px] tracking-[-0.3px]" style={{ color: "var(--c-text)" }}>
+                  {venue.name}
+                </div>
+                <div className="text-[12.5px] mt-0.5" style={{ color: "var(--c-muted)" }}>/{venue.slug}</div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Link
+                  className="w-full block text-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white transition"
+                  href={`/app/${venue.slug}/items` as Route}
+                  style={{ background: "var(--c-sidebar)" }}
+                >
+                  Manage items
+                </Link>
+                <Link
+                  className="w-full block text-center rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition"
+                  href={`/v/${venue.slug}/menu` as Route}
+                  style={{ borderColor: "var(--c-border)", color: "var(--c-text)" }}
+                >
+                  Public menu
+                </Link>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

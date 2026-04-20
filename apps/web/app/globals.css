@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,26 +6,33 @@
 
 :root {
   color-scheme: light;
+
+  --accent: oklch(62% 0.18 65);
+  --accent-light: oklch(96% 0.05 65);
+  --accent-dark: oklch(45% 0.18 65);
+  --c-bg: oklch(97% 0.008 75);
+  --c-bg2: oklch(94% 0.01 75);
+  --c-border: oklch(88% 0.012 70);
+  --c-text: oklch(18% 0.02 60);
+  --c-muted: oklch(52% 0.015 70);
+  --c-sidebar: oklch(13% 0.02 55);
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-html {
-  min-height: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(201, 107, 44, 0.2), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(36, 65, 48, 0.18), transparent 30%),
-    #f6f0e5;
+html, body {
+  height: 100%;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
-  background: transparent;
-  color: #171410;
-  font-family: "Instrument Sans", system-ui, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -39,4 +46,10 @@ textarea,
 button {
   font: inherit;
 }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 

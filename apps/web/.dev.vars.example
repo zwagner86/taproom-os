@@ -1,7 +1,7 @@
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+SUPABASE_SECRET_KEY=your-secret-key
 PLATFORM_ADMIN_EMAILS=founder@example.com
 APP_ENCRYPTION_KEY=replace-with-a-long-random-secret
 STRIPE_APPLICATION_FEE_PERCENT=0.08

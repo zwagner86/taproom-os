@@ -14,31 +14,98 @@ export default async function TvMenuPage({ params }: { params: Promise<{ venue: 
     notFound();
   }
 
+  const pours = items.filter((i) => i.type === "pour");
+  const other = items.filter((i) => i.type !== "pour");
+
   return (
-    <main className="min-h-screen bg-ink px-8 py-10 text-parchment">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div className="flex items-end justify-between gap-6">
+    <main
+      className="min-h-screen px-10 py-8"
+      style={{ background: "var(--c-sidebar)", color: "oklch(92% 0.01 75)" }}
+    >
+      <div className="mx-auto max-w-[1400px]">
+        {/* Header */}
+        <div className="flex items-end justify-between gap-6 mb-8">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-parchment/70">{venueRecord.name}</p>
-            <h1 className="font-display text-7xl">{venueRecord.menu_label}</h1>
+            <div className="text-[13px] font-bold uppercase tracking-[0.28em] mb-1" style={{ color: "oklch(60% 0.01 75)" }}>
+              {venueRecord.name}
+            </div>
+            <h1 className="text-[56px] font-black tracking-[-1px] leading-none" style={{ fontFamily: "Lora, serif", color: "oklch(95% 0.012 75)" }}>
+              {venueRecord.menu_label}
+            </h1>
           </div>
-          {venueRecord.tagline ? <p className="max-w-xl text-right text-xl text-parchment/70">{venueRecord.tagline}</p> : null}
+          {venueRecord.tagline && (
+            <p className="max-w-sm text-right text-[17px] leading-relaxed" style={{ color: "oklch(62% 0.01 75)" }}>
+              {venueRecord.tagline}
+            </p>
+          )}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          {items.map((item) => (
-            <div className="rounded-[2rem] border border-parchment/10 bg-white/5 p-6" key={item.id}>
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="font-display text-4xl">{item.name}</h2>
-                <p className="text-sm uppercase tracking-[0.2em] text-parchment/55">{item.type}</p>
-              </div>
-              <p className="mt-2 text-lg text-parchment/70">
-                {[item.style_or_category, formatAbv(item.abv)].filter(Boolean).join(" · ")}
-              </p>
-              {item.description ? <p className="mt-4 text-lg leading-8 text-parchment/80">{item.description}</p> : null}
+        {/* On tap */}
+        {pours.length > 0 && (
+          <div className="mb-8">
+            <div className="text-[11px] font-bold uppercase tracking-[0.8px] mb-4" style={{ color: "var(--accent)" }}>
+              On Tap · {pours.length}
             </div>
-          ))}
-        </div>
+            <div className="grid gap-3 xl:grid-cols-2">
+              {pours.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl p-5"
+                  style={{ background: "oklch(18% 0.018 55)", border: "1px solid oklch(28% 0.015 55)" }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-[26px] font-black leading-tight tracking-[-0.5px]" style={{ fontFamily: "Lora, serif" }}>
+                        {item.name}
+                      </h2>
+                      <p className="text-[15px] mt-1" style={{ color: "oklch(65% 0.01 75)" }}>
+                        {[item.style_or_category, formatAbv(item.abv)].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    {item.abv !== null && (
+                      <div className="flex-shrink-0 text-right">
+                        <div className="text-[28px] font-black" style={{ color: "var(--accent)" }}>
+                          {item.abv}%
+                        </div>
+                        <div className="text-[11px] uppercase tracking-[0.5px]" style={{ color: "oklch(55% 0.01 75)" }}>
+                          ABV
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "oklch(68% 0.01 75)" }}>
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Other items */}
+        {other.length > 0 && (
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.8px] mb-4" style={{ color: "oklch(55% 0.01 75)" }}>
+              Also available
+            </div>
+            <div className="grid gap-2 xl:grid-cols-3">
+              {other.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg px-4 py-3"
+                  style={{ background: "oklch(16% 0.015 55)", border: "1px solid oklch(24% 0.012 55)" }}
+                >
+                  <div className="font-semibold text-[15px]">{item.name}</div>
+                  <div className="text-[12.5px] mt-0.5" style={{ color: "oklch(58% 0.01 75)" }}>
+                    {item.style_or_category ?? item.type}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

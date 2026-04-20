@@ -54,7 +54,7 @@ create table if not exists public.event_check_in_sessions (
   event_id uuid not null references public.events (id) on delete cascade,
   session_name text not null,
   pin text,
-  token text not null unique default encode(gen_random_bytes(18), 'hex'),
+  token text not null unique default encode(extensions.gen_random_bytes(18), 'hex'),
   created_by_user_id uuid references auth.users (id) on delete set null,
   expires_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
@@ -110,4 +110,3 @@ on public.check_in_events
 for all
 using (public.user_has_venue_access(venue_id))
 with check (public.user_has_venue_access(venue_id));
-

@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Button, Card, Input, Label, Select } from "@taproom/ui";
+import { Badge, Button, Card, Input, Label, Select } from "@taproom/ui";
 
 import { startSquareConnectAction, linkSquareItemAction, syncSquareItemsAction } from "@/server/actions/providers";
 import { listVenueItems } from "@/server/repositories/items";
@@ -36,98 +36,159 @@ export default async function VenueSquarePage({
   const syncAction = syncSquareItemsAction.bind(null, venue);
   const linkAction = linkSquareItemAction.bind(null, venue);
 
+  const statusVariant = connection?.status === "active" ? "success" :
+    connection?.status === "error" ? "error" : "default";
+
   return (
-    <div className="space-y-6">
-      <Card className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Square</p>
-          <h1 className="font-display text-4xl text-ink">Connection and item linking</h1>
-          <p className="max-w-3xl text-sm leading-6 text-ink/65">
-            TaproomOS keeps items as the source records and links live Square catalog variations for price and
-            availability snapshots. No mirrored catalog table, no inventory writeback.
+    <div>
+      <div className="flex items-start justify-between mb-7 gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
+            Square Integration
+          </h1>
+          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+            Link TaproomOS items to Square catalog variations for live price snapshots.
           </p>
         </div>
-        {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-        {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
-      </Card>
+      </div>
 
-      <Card className="space-y-4">
-        <p className="text-sm font-semibold text-ink">Connection status</p>
-        <p className="text-sm text-ink/60">
-          {connection?.status ?? "not_connected"}
-          {connection?.merchant_id ? ` · Merchant ${connection.merchant_id}` : ""}
-        </p>
-        {connection?.last_error ? <p className="text-sm text-ember">{connection.last_error}</p> : null}
-        <div className="flex flex-wrap gap-3">
-          <form action={connectAction}>
-            <Button type="submit">{connection?.merchant_id ? "Reconnect Square" : "Connect Square"}</Button>
-          </form>
-          <form action={syncAction}>
-            <Button type="submit" variant="ghost">
-              Sync linked items
-            </Button>
-          </form>
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
         </div>
-      </Card>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
 
-      <Card>
-        <form className="grid gap-4 md:grid-cols-[1fr_auto]">
-          <div className="space-y-2">
-            <Label htmlFor="square-query">Search connected Square catalog</Label>
-            <Input defaultValue={query} id="square-query" name="q" placeholder="IPA, flight, t-shirt..." />
-          </div>
-          <div className="flex items-end">
-            <Button type="submit">Search</Button>
-          </div>
-        </form>
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="font-display text-2xl text-ink">Search results</h2>
-        {results.length === 0 ? (
-          <p className="text-sm leading-6 text-ink/65">
-            {query
-              ? "No matching Square catalog variations were found for this venue."
-              : "Search the connected Square catalog to link a TaproomOS item to a live Square variation."}
-          </p>
-        ) : (
-          <div className="grid gap-3">
-            {results.map((result) => (
-              <Card className="space-y-4" key={result.id}>
-                <div>
-                  <p className="font-semibold text-ink">{result.name}</p>
-                  <p className="text-sm text-ink/60">
-                    {result.variationName ?? "Default variation"} ·{" "}
-                    {result.priceCents !== null ? `$${(result.priceCents / 100).toFixed(2)}` : "No price"} ·{" "}
-                    {result.available === false ? "Unavailable" : "Available"}
-                  </p>
-                </div>
-                <form action={linkAction} className="grid gap-4 md:grid-cols-[1fr_auto]">
-                  <input name="external_id" type="hidden" value={result.id} />
-                  <div className="space-y-2">
-                    <Label htmlFor={`link-item-${result.id}`}>TaproomOS item</Label>
-                    <Select defaultValue="" id={`link-item-${result.id}`} name="item_id" required>
-                      <option disabled value="">
-                        Select an item
-                      </option>
-                      {items
-                        .filter((item) => item.type !== "event")
-                        .map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.name}
-                          </option>
-                        ))}
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button type="submit">Link item</Button>
-                  </div>
+      <div className="grid grid-cols-[1fr_1.5fr] gap-6 items-start">
+        {/* Left: connection status */}
+        <div className="flex flex-col gap-4">
+          <Card>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Connection status</div>
+              <Badge variant={statusVariant}>
+                {connection?.status ?? "Not connected"}
+              </Badge>
+            </div>
+            {connection?.merchant_id && (
+              <div
+                className="rounded-lg px-3 py-2 text-[12px] mb-4"
+                style={{ background: "var(--c-bg2)", color: "var(--c-muted)" }}
+              >
+                Merchant: {connection.merchant_id}
+              </div>
+            )}
+            {connection?.last_error && (
+              <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-800">
+                {connection.last_error}
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <form action={connectAction}>
+                <Button className="w-full" type="submit">
+                  {connection?.merchant_id ? "Reconnect Square" : "Connect Square"}
+                </Button>
+              </form>
+              {connection?.status === "active" && (
+                <form action={syncAction}>
+                  <Button className="w-full" type="submit" variant="secondary">
+                    Sync linked items
+                  </Button>
                 </form>
-              </Card>
-            ))}
-          </div>
-        )}
-      </Card>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <div className="text-sm font-semibold mb-2" style={{ color: "var(--c-text)" }}>How it works</div>
+            <p className="text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+              TaproomOS keeps items as source records and links live Square catalog variations for price and availability snapshots.
+              No mirrored catalog table, no inventory writeback.
+            </p>
+          </Card>
+        </div>
+
+        {/* Right: catalog search + link */}
+        <div>
+          <Card style={{ marginBottom: 16 }}>
+            <div className="text-sm font-semibold mb-3" style={{ color: "var(--c-text)" }}>Search Square catalog</div>
+            <form className="flex gap-2">
+              <Input
+                defaultValue={query}
+                name="q"
+                placeholder="IPA, flight, t-shirt..."
+                style={{ flex: 1 }}
+              />
+              <Button type="submit">Search</Button>
+            </form>
+          </Card>
+
+          {query ? (
+            <div>
+              <div
+                className="text-[13px] font-bold uppercase tracking-[0.8px] mb-3"
+                style={{ color: "var(--c-muted)" }}
+              >
+                Results · {results.length}
+              </div>
+              {results.length === 0 ? (
+                <Card>
+                  <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+                    No matching Square catalog variations found.
+                  </p>
+                </Card>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {results.map((result) => (
+                    <Card key={result.id}>
+                      <div className="mb-3">
+                        <div className="font-semibold text-[14px]" style={{ color: "var(--c-text)" }}>{result.name}</div>
+                        <div className="text-[12.5px]" style={{ color: "var(--c-muted)" }}>
+                          {result.variationName ?? "Default variation"} ·{" "}
+                          {result.priceCents !== null ? `$${(result.priceCents / 100).toFixed(2)}` : "No price"} ·{" "}
+                          <Badge variant={result.available === false ? "error" : "success"} style={{ fontSize: 11 }}>
+                            {result.available === false ? "Unavailable" : "Available"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <form action={linkAction} className="flex gap-2">
+                        <input name="external_id" type="hidden" value={result.id} />
+                        <Select
+                          defaultValue=""
+                          id={`link-item-${result.id}`}
+                          name="item_id"
+                          required
+                          style={{ flex: 1 }}
+                        >
+                          <option disabled value="">Link to item…</option>
+                          {items
+                            .filter((item) => item.type !== "event")
+                            .map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                        </Select>
+                        <Button size="sm" type="submit">Link</Button>
+                      </form>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className="rounded-[10px] px-4 py-3 text-[13px] text-center"
+              style={{ background: "var(--c-bg2)", color: "var(--c-muted)" }}
+            >
+              Search to find Square catalog items and link them to TaproomOS items.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -24,20 +24,37 @@ export default async function PublicMenuPage({
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 px-4 py-12 lg:px-8">
-      <section className="space-y-4">
-        <Badge>{venueRecord.venue_type}</Badge>
-        <div className="space-y-3">
-          <h1 className="font-display text-5xl text-ink">{venueRecord.menu_label}</h1>
-          <p className="max-w-2xl text-base leading-7 text-ink/65">
-            {venueRecord.tagline ?? `${venueRecord.name} keeps rotating offerings, events, and fan touchpoints in one place.`}
-          </p>
-        </div>
-      </section>
-      {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-      {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
+    <main className="mx-auto max-w-3xl px-5 py-10">
+      <div className="mb-8">
+        <Badge variant="info" style={{ marginBottom: 10 }}>{venueRecord.venue_type}</Badge>
+        <h1 className="text-[36px] font-black tracking-[-0.8px] mb-2" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
+          {venueRecord.menu_label}
+        </h1>
+        <p className="text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+          {venueRecord.tagline ?? `${venueRecord.name} — rotating offerings, events, and fan touchpoints.`}
+        </p>
+      </div>
 
-      <PublicItemList items={items} />
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
+
+      <div
+        className="rounded-xl border mb-8"
+        style={{ borderColor: "var(--c-border)", background: "white" }}
+      >
+        <div className="px-5 py-1">
+          <PublicItemList items={items} />
+        </div>
+      </div>
+
       <PublicFollowCard returnPath={`/v/${venue}/menu`} venueSlug={venue} />
     </main>
   );

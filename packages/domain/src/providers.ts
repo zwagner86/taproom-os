@@ -2,6 +2,13 @@ import { z } from "zod";
 
 export const providerConnectionStatuses = ["not_connected", "pending", "active", "error"] as const;
 export const ProviderConnectionStatusSchema = z.enum(providerConnectionStatuses);
+export const venuePaymentCapabilityStatuses = [
+  "not_connected",
+  "onboarding_incomplete",
+  "restricted",
+  "ready",
+] as const;
+export const VenuePaymentCapabilityStatusSchema = z.enum(venuePaymentCapabilityStatuses);
 
 export const StripeConnectionSchema = z.object({
   id: z.string().uuid(),
@@ -24,5 +31,63 @@ export const SquareCatalogResultSchema = z.object({
   available: z.boolean().nullable().default(null),
 });
 
+export const VenuePaymentCapabilitySchema = z.object({
+  status: VenuePaymentCapabilityStatusSchema,
+  canSellPaidEvents: z.boolean(),
+  canSellMemberships: z.boolean(),
+  canIssueRefunds: z.boolean(),
+  blockingReason: z.string().nullable().default(null),
+});
+
 export type StripeConnection = z.infer<typeof StripeConnectionSchema>;
 export type SquareCatalogResult = z.infer<typeof SquareCatalogResultSchema>;
+export type VenuePaymentCapability = z.infer<typeof VenuePaymentCapabilitySchema>;
+
+export function resolveVenuePaymentCapability(
+  connection:
+    | Pick<StripeConnection, "stripeAccountId" | "status" | "chargesEnabled" | "detailsSubmitted" | "lastError">
+    | null
+    | undefined,
+): VenuePaymentCapability {
+  if (!connection?.stripeAccountId) {
+    return {
+      blockingReason: "Connect or create your Stripe account to enable paid ticket sales and membership subscriptions.",
+      canIssueRefunds: false,
+      canSellMemberships: false,
+      canSellPaidEvents: false,
+      status: "not_connected",
+    };
+  }
+
+  if (connection.status === "error") {
+    return {
+      blockingReason:
+        connection.lastError ??
+        "Stripe marked this connected account as restricted. Review billing to finish any required fixes.",
+      canIssueRefunds: false,
+      canSellMemberships: false,
+      canSellPaidEvents: false,
+      status: "restricted",
+    };
+  }
+
+  if (connection.chargesEnabled && connection.detailsSubmitted && connection.status === "active") {
+    return {
+      blockingReason: null,
+      canIssueRefunds: true,
+      canSellMemberships: true,
+      canSellPaidEvents: true,
+      status: "ready",
+    };
+  }
+
+  return {
+    blockingReason:
+      connection.lastError ??
+      "Finish Stripe onboarding before enabling paid ticket sales, membership subscriptions, or TaproomOS refunds.",
+    canIssueRefunds: false,
+    canSellMemberships: false,
+    canSellPaidEvents: false,
+    status: "onboarding_incomplete",
+  };
+}

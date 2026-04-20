@@ -9,10 +9,11 @@ type MobileShellProps = PropsWithChildren<{
 
 export function MobileShell({ children, sidebar, className }: MobileShellProps) {
   return (
-    <div className={cn("mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:flex-row lg:px-8", className)}>
-      {sidebar ? <aside className="w-full lg:max-w-xs">{sidebar}</aside> : null}
-      <main className="min-w-0 flex-1">{children}</main>
+    <div className={cn("flex h-screen overflow-hidden bg-parchment", className)}>
+      {sidebar}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto p-7">{children}</main>
+      </div>
     </div>
   );
 }
-

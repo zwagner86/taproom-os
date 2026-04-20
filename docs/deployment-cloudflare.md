@@ -18,8 +18,8 @@ The Worker/runtime environment needs at least:
 
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
 - `PLATFORM_ADMIN_EMAILS`
 - `APP_ENCRYPTION_KEY`
 
@@ -36,3 +36,4 @@ Add live integration secrets for commerce and messaging:
 - OpenNext preview/deploy commands are still the intended Cloudflare deployment path.
 - If you introduce ISR or on-demand revalidation later, revisit the OpenNext/Cloudflare cache setup rather than layering it in ad hoc.
 - Stripe and Square callbacks assume `NEXT_PUBLIC_APP_URL` matches the public Cloudflare-hosted origin.
+- Use the Supabase publishable key for browser and SSR session clients, and the Supabase secret key only for server-side admin actions.

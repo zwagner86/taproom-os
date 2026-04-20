@@ -14,32 +14,41 @@ export function PublicFollowCard({
   const action = createFollowerAction.bind(null, venueSlug, returnPath);
 
   return (
-    <Card className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ember">Fan follow</p>
-        <h2 className="font-display text-2xl text-ink">{title}</h2>
-        <p className="text-sm leading-6 text-ink/65">
-          Get event drops, membership updates, and taproom news. Email is the default; SMS is only used when you opt
-          in.
+    <Card>
+      <div className="mb-4">
+        <div
+          className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
+          style={{ color: "var(--accent)" }}
+        >
+          Follow this venue
+        </div>
+        <div className="font-bold text-[18px] tracking-[-0.3px] mb-1" style={{ color: "var(--c-text)" }}>
+          {title}
+        </div>
+        <p className="text-[13.5px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+          Get event drops, membership updates, and taproom news. Email is the default; SMS only when you opt in.
         </p>
       </div>
 
-      <form action={action} className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={`follow-email-${venueSlug}`}>Email</Label>
-          <Input id={`follow-email-${venueSlug}`} name="email" placeholder="you@example.com" type="email" />
+      <form action={action} className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`follow-email-${venueSlug}`}>Email</Label>
+            <Input id={`follow-email-${venueSlug}`} name="email" placeholder="you@example.com" type="email" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`follow-phone-${venueSlug}`}>Phone</Label>
+            <Input id={`follow-phone-${venueSlug}`} name="phone" placeholder="+1 555 123 4567" />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`follow-phone-${venueSlug}`}>Phone</Label>
-          <Input id={`follow-phone-${venueSlug}`} name="phone" placeholder="+1 555 123 4567" />
-        </div>
-        <label className="inline-flex items-center gap-3 text-sm font-semibold text-ink/70 md:col-span-2">
+        <label
+          className="flex items-center gap-2 text-[13px] cursor-pointer"
+          style={{ color: "var(--c-muted)" }}
+        >
           <input name="sms_opt_in" type="checkbox" />
-          I want SMS updates too
+          Send me SMS updates too
         </label>
-        <div className="md:col-span-2">
-          <Button type="submit">Follow this venue</Button>
-        </div>
+        <Button type="submit">Follow this venue</Button>
       </form>
     </Card>
   );

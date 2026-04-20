@@ -5,9 +5,11 @@ import { notFound } from "next/navigation";
 import { Badge, Button, Card, Input, Label } from "@taproom/ui";
 
 import { PublicFollowCard } from "@/components/public-follow-card";
+import { getPaidEventGateCopy } from "@/lib/venue-payment-capability";
 import { createFreeEventBookingAction, createPaidEventCheckoutAction } from "@/server/actions/events";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getPublicVenueEventBySlug } from "@/server/repositories/events";
+import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 export default async function PublicEventDetailPage({
   params,
@@ -24,54 +26,96 @@ export default async function PublicEventDetailPage({
     notFound();
   }
 
+  const paymentCapability = await getVenuePaymentCapability(venueRecord.id);
+  const paidEventUnavailable = event.price_cents !== null && !paymentCapability.canSellPaidEvents;
   const rsvpAction = createFreeEventBookingAction.bind(null, venue, eventSlug);
   const paidAction = createPaidEventCheckoutAction.bind(null, venue, eventSlug);
+  const isFree = event.price_cents === null || event.price_cents === 0;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8 px-4 py-12 lg:px-8">
-      <Card className="space-y-5">
-        <Badge>Event detail</Badge>
-        <h1 className="font-display text-5xl text-ink">{event.title}</h1>
-        <p className="text-base text-ink/60">{formatDate(event.starts_at)}</p>
-        <p className="text-base leading-8 text-ink/70">{event.description ?? "Join us in the taproom."}</p>
-        {event.price_cents !== null ? (
-          <p className="text-sm font-semibold text-ink/65">{formatCurrency(event.price_cents, event.currency)}</p>
-        ) : (
-          <p className="text-sm font-semibold text-ink/55">Free RSVP</p>
+    <main className="mx-auto max-w-3xl px-5 py-10">
+      {/* Event header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="accent">Event</Badge>
+          {isFree ? (
+            <Badge variant="success">Free RSVP</Badge>
+          ) : (
+            <Badge variant="info">{formatCurrency(event.price_cents!, event.currency)}</Badge>
+          )}
+        </div>
+        <h1 className="text-[36px] font-black tracking-[-0.8px] mb-2" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
+          {event.title}
+        </h1>
+        <p className="text-[14px] mb-3" style={{ color: "var(--c-muted)" }}>
+          {formatDate(event.starts_at)}
+        </p>
+        {event.description && (
+          <p className="text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+            {event.description}
+          </p>
         )}
-        {checkout === "success" ? (
-          <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">Checkout completed. Your confirmation will appear shortly.</p>
-        ) : null}
-        {checkout === "cancel" ? (
-          <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">Checkout was canceled before payment completed.</p>
-        ) : null}
-        {message ? <p className="rounded-3xl bg-pine/10 px-4 py-3 text-sm text-pine">{message}</p> : null}
-        {error ? <p className="rounded-3xl bg-ember/10 px-4 py-3 text-sm text-ember">{error}</p> : null}
-      </Card>
+      </div>
 
-      <Card>
-        <form action={event.price_cents === null ? rsvpAction : paidAction} className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="booking-name">Your name</Label>
-            <Input id="booking-name" name="purchaser_name" placeholder="Sam Taproom" required />
+      {checkout === "success" && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          Checkout completed. Your confirmation will appear shortly.
+        </div>
+      )}
+      {checkout === "cancel" && (
+        <div className="mb-5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+          Checkout was canceled before payment completed.
+        </div>
+      )}
+      {message && (
+        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
+          {error}
+        </div>
+      )}
+
+      {paidEventUnavailable ? (
+        <Card style={{ marginBottom: 24 }}>
+          <div className="font-semibold mb-2" style={{ color: "var(--c-text)" }}>Paid ticketing is unavailable right now.</div>
+          <p className="text-[13.5px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+            {getPaidEventGateCopy()} This venue can still use TaproomOS for menus, free events, displays, follows,
+            and Square-linked catalog management.
+          </p>
+        </Card>
+      ) : (
+        <Card style={{ marginBottom: 24 }}>
+          <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>
+            {isFree ? "RSVP for this event" : "Reserve your spot"}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="booking-email">Email</Label>
-            <Input id="booking-email" name="purchaser_email" placeholder="sam@example.com" type="email" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="booking-phone">Phone</Label>
-            <Input id="booking-phone" name="purchaser_phone" placeholder="+1 555 123 4567" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="booking-party-size">Party size</Label>
-            <Input defaultValue="1" id="booking-party-size" min="1" name="party_size" type="number" />
-          </div>
-          <div className="flex items-end">
-            <Button type="submit">{event.price_cents === null ? "Confirm RSVP" : "Continue to checkout"}</Button>
-          </div>
-        </form>
-      </Card>
+          <form action={isFree ? rsvpAction : paidAction} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="booking-name">Your name <span style={{ color: "var(--accent)" }}>*</span></Label>
+              <Input id="booking-name" name="purchaser_name" placeholder="Sam Taproom" required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="booking-email">Email</Label>
+                <Input id="booking-email" name="purchaser_email" placeholder="sam@example.com" type="email" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="booking-phone">Phone</Label>
+                <Input id="booking-phone" name="purchaser_phone" placeholder="+1 555 123 4567" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="booking-party-size">Party size</Label>
+              <Input defaultValue="1" id="booking-party-size" min="1" name="party_size" style={{ width: 100 }} type="number" />
+            </div>
+            <Button className="w-full" type="submit">
+              {isFree ? "Confirm RSVP" : "Continue to checkout"}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       <PublicFollowCard returnPath={`/v/${venue}/events/${eventSlug}`} venueSlug={venue} />
     </main>

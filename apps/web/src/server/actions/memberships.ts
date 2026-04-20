@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
 import { getEnv } from "@/env";
+import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import { slugify } from "@/lib/utils";
 import { getPaymentsProvider } from "@/server/providers";
 import {
@@ -20,13 +21,15 @@ import {
 import { getStripeConnectionForVenue } from "@/server/repositories/providers";
 import { requireVenueAccess } from "@/server/repositories/venues";
 import { sendEmailFirstNotification } from "@/server/services/notifications";
+import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 type MembershipPlanInsert = Database["public"]["Tables"]["membership_plans"]["Insert"];
 type MembershipPlanUpdate = Database["public"]["Tables"]["membership_plans"]["Update"];
 
 export async function createMembershipPlanAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
-  const payload = buildCreatePlanPayload(access.venue.id, formData);
+  const capability = await getVenuePaymentCapability(access.venue.id);
+  const { payload, warning } = buildCreatePlanPayload(access.venue.id, formData, capability.canSellMemberships);
 
   try {
     await createMembershipPlanAdmin(payload);
@@ -36,22 +39,30 @@ export async function createMembershipPlanAction(venueSlug: string, formData: Fo
   }
 
   revalidateMembershipPaths(venueSlug);
-  redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent("Membership plan created.")}`);
+  redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent(warning ?? "Membership plan created.")}`);
 }
 
 export async function updateMembershipPlanAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
   const planId = String(formData.get("plan_id") ?? "");
+  const capability = await getVenuePaymentCapability(access.venue.id);
+  const existing = await getMembershipPlanById(access.venue.id, planId);
+
+  if (!existing) {
+    redirect(`/app/${venueSlug}/memberships?error=${encodeURIComponent("Membership plan not found.")}`);
+  }
+
+  const { payload, warning } = buildPlanPayload(formData, capability.canSellMemberships, existing.active, true);
 
   try {
-    await updateMembershipPlanAdmin(access.venue.id, planId, buildPlanPayload(access.venue.id, formData, true));
+    await updateMembershipPlanAdmin(access.venue.id, planId, payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save membership plan.";
     redirect(`/app/${venueSlug}/memberships?error=${encodeURIComponent(message)}`);
   }
 
   revalidateMembershipPaths(venueSlug);
-  redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent("Membership plan updated.")}`);
+  redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent(warning ?? "Membership plan updated.")}`);
 }
 
 export async function startMembershipCheckoutAction(venueSlug: string, planId: string, formData: FormData) {
@@ -62,10 +73,15 @@ export async function startMembershipCheckoutAction(venueSlug: string, planId: s
     redirect(`/v/${venueSlug}/memberships?error=${encodeURIComponent("Membership plan not found.")}`);
   }
 
+  const capability = await getVenuePaymentCapability(venue.id);
   const connection = await getStripeConnectionForVenue(venue.id);
 
+  if (!capability.canSellMemberships) {
+    redirect(`/v/${venueSlug}/memberships?error=${encodeURIComponent(getMembershipGateCopy())}`);
+  }
+
   if (!connection?.stripe_account_id) {
-    redirect(`/v/${venueSlug}/memberships?error=${encodeURIComponent("Payments are not connected for this venue yet.")}`);
+    redirect(`/v/${venueSlug}/memberships?error=${encodeURIComponent(getMembershipGateCopy())}`);
   }
 
   let resolvedPlan = plan;
@@ -223,7 +239,22 @@ export async function resumeMembershipAction(venueSlug: string, membershipId: st
   redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent("Membership resumed.")}`);
 }
 
-function buildCreatePlanPayload(venueId: string, formData: FormData): MembershipPlanInsert {
+function buildCreatePlanPayload(venueId: string, formData: FormData, canSellMemberships: boolean) {
+  const payload = buildCreateMembershipPlanInsert(venueId, formData);
+  const blockedFromActivatingPlan = payload.active && !canSellMemberships;
+
+  return {
+    payload: {
+      ...payload,
+      active: blockedFromActivatingPlan ? false : payload.active,
+    } satisfies MembershipPlanInsert,
+    warning: blockedFromActivatingPlan
+      ? `${getMembershipGateCopy()} This plan was saved as a draft.`
+      : null,
+  };
+}
+
+function buildCreateMembershipPlanInsert(venueId: string, formData: FormData): MembershipPlanInsert {
   const name = String(formData.get("name") ?? "").trim();
 
   return {
@@ -238,17 +269,29 @@ function buildCreatePlanPayload(venueId: string, formData: FormData): Membership
   };
 }
 
-function buildPlanPayload(_venueId: string, formData: FormData, isUpdate = false): MembershipPlanUpdate {
+function buildPlanPayload(
+  formData: FormData,
+  canSellMemberships: boolean,
+  wasActive: boolean,
+  isUpdate = false,
+) {
   const name = String(formData.get("name") ?? "").trim();
+  const requestedActive = String(formData.get("active") ?? (isUpdate ? "off" : "on")) === "on";
+  const blockedFromActivatingPlan = !wasActive && requestedActive && !canSellMemberships;
 
   return {
-    active: String(formData.get("active") ?? (isUpdate ? "off" : "on")) === "on",
-    billing_interval: String(formData.get("billing_interval") ?? "month") as MembershipPlanInsert["billing_interval"],
-    currency: String(formData.get("currency") ?? "USD").trim().toUpperCase() || "USD",
-    description: normalizeOptionalString(formData.get("description")),
-    name,
-    price_cents: parseOptionalInteger(formData.get("price_cents")) ?? 0,
-    slug: slugify(String(formData.get("slug") ?? name)),
+    payload: {
+      active: blockedFromActivatingPlan ? false : requestedActive,
+      billing_interval: String(formData.get("billing_interval") ?? "month") as MembershipPlanInsert["billing_interval"],
+      currency: String(formData.get("currency") ?? "USD").trim().toUpperCase() || "USD",
+      description: normalizeOptionalString(formData.get("description")),
+      name,
+      price_cents: parseOptionalInteger(formData.get("price_cents")) ?? 0,
+      slug: slugify(String(formData.get("slug") ?? name)),
+    } satisfies MembershipPlanUpdate,
+    warning: blockedFromActivatingPlan
+      ? `${getMembershipGateCopy()} This plan remains in draft until billing is ready.`
+      : null,
   };
 }
 
