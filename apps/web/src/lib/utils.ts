@@ -20,3 +20,7 @@ export function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+export function toDateTimeLocal(value: string) {
+  return new Date(value).toISOString().slice(0, 16);
+}
+

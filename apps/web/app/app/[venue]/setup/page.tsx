@@ -2,17 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { Button, Card, Input, Label, Select } from "@taproom/ui";
 
+import { AccentPresetPicker } from "@/components/accent-preset-picker";
 import { updateVenueSettingsAction } from "@/server/actions/venues";
 import { requireVenueAccess } from "@/server/repositories/venues";
-
-const ACCENT_PRESETS = [
-  { label: "Amber", value: "oklch(62% 0.18 65)" },
-  { label: "Slate Blue", value: "oklch(55% 0.14 240)" },
-  { label: "Forest", value: "oklch(52% 0.14 155)" },
-  { label: "Crimson", value: "oklch(52% 0.18 20)" },
-  { label: "Violet", value: "oklch(55% 0.18 300)" },
-  { label: "Teal", value: "oklch(58% 0.15 195)" },
-];
 
 export default async function VenueSetupPage({
   params,
@@ -119,33 +111,7 @@ export default async function VenueSetupPage({
         <Card>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Branding</div>
           <div className="flex flex-col gap-4">
-            <div>
-              <Label>Accent color presets</Label>
-              <div className="flex gap-2 flex-wrap mt-2">
-                {ACCENT_PRESETS.map((c) => (
-                  <div
-                    className="rounded-lg border-2 border-rim"
-                    key={c.value}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      background: c.value,
-                      cursor: "pointer",
-                    }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="accent_color">Accent color</Label>
-              <Input
-                defaultValue={venueRecord.accent_color}
-                id="accent_color"
-                name="accent_color"
-                placeholder="oklch(62% 0.18 65)"
-              />
-            </div>
+            <AccentPresetPicker defaultValue={venueRecord.accent_color} />
             <div className="flex flex-col gap-1">
               <Label htmlFor="logo_url">Logo URL</Label>
               <Input

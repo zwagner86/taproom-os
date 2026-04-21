@@ -6,20 +6,19 @@ import { PublicFollowCard } from "@/components/public-follow-card";
 import { PublicItemList } from "@/components/public-item-list";
 import { listPublicVenueItems } from "@/server/repositories/items";
 
-export default async function PublicMenuPage({
+export default async function PublicDrinksPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ venue: string }>;
-  searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const { venue } = await params;
-  const { error, message } = await searchParams;
   const { items, venue: venueRecord } = await listPublicVenueItems(venue);
 
   if (!venueRecord) {
     notFound();
   }
+
+  const drinks = items.filter((i) => i.type === "pour");
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-10">
@@ -27,32 +26,23 @@ export default async function PublicMenuPage({
         <h1 className="text-[36px] font-black tracking-[-0.8px] mb-2" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
           {venueRecord.menu_label}
         </h1>
-        <p className="text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-          {venueRecord.tagline ?? `${venueRecord.name} — rotating offerings, events, and fan touchpoints.`}
-        </p>
+        {venueRecord.tagline && (
+          <p className="text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+            {venueRecord.tagline}
+          </p>
+        )}
       </div>
-
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
 
       <div
         className="rounded-xl border mb-8"
         style={{ borderColor: "var(--c-border)", background: "white" }}
       >
         <div className="px-5 py-1">
-          <PublicItemList items={items} />
+          <PublicItemList emptyMessage="Nothing on tap right now — check back soon." items={drinks} />
         </div>
       </div>
 
-      <PublicFollowCard returnPath={`/v/${venue}/menu`} venueSlug={venue} />
+      <PublicFollowCard returnPath={`/v/${venue}/drinks`} venueSlug={venue} />
     </main>
   );
 }

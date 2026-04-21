@@ -33,10 +33,10 @@ export default async function PublicEventDetailPage({
   const isFree = event.price_cents === null || event.price_cents === 0;
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-10">
+    <main className="mx-auto max-w-2xl px-5 py-10">
       {/* Event header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-4">
           <Badge variant="accent">Event</Badge>
           {isFree ? (
             <Badge variant="success">Free RSVP</Badge>
@@ -44,14 +44,56 @@ export default async function PublicEventDetailPage({
             <Badge variant="info">{formatCurrency(event.price_cents!, event.currency)}</Badge>
           )}
         </div>
-        <h1 className="text-[36px] font-black tracking-[-0.8px] mb-2" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
+
+        <h1
+          className="text-[34px] font-black tracking-[-0.8px] mb-4"
+          style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}
+        >
           {event.title}
         </h1>
-        <p className="text-[14px] mb-3" style={{ color: "var(--c-muted)" }}>
-          {formatDate(event.starts_at)}
-        </p>
+
+        {/* Structured meta row */}
+        <div
+          className="flex flex-wrap gap-x-8 gap-y-3 py-4 border-y"
+          style={{ borderColor: "var(--c-border)" }}
+        >
+          <div>
+            <div
+              className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
+              style={{ color: "var(--c-muted)" }}
+            >
+              Date &amp; Time
+            </div>
+            <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
+              {formatDate(event.starts_at)}
+            </div>
+          </div>
+          <div>
+            <div
+              className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
+              style={{ color: "var(--c-muted)" }}
+            >
+              Capacity
+            </div>
+            <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
+              {event.capacity ?? "Open"}
+            </div>
+          </div>
+          <div>
+            <div
+              className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
+              style={{ color: "var(--c-muted)" }}
+            >
+              Price
+            </div>
+            <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
+              {isFree ? "Free" : formatCurrency(event.price_cents!, event.currency)}
+            </div>
+          </div>
+        </div>
+
         {event.description && (
-          <p className="text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+          <p className="text-[15px] leading-relaxed mt-4" style={{ color: "var(--c-text)" }}>
             {event.description}
           </p>
         )}

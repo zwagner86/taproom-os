@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
+import { Badge, Button, Card } from "@taproom/ui";
 
+import { ItemTypeForm } from "@/components/item-type-form";
 import { createItemAction, deleteItemAction, updateItemAction } from "@/server/actions/items";
 import { listVenueItems } from "@/server/repositories/items";
 import { requireVenueAccess } from "@/server/repositories/venues";
@@ -163,40 +164,7 @@ export default async function VenueItemsPage({
       {/* Add item form */}
       <Card>
         <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Add item</div>
-        <form action={createAction} className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="create-name">Name <span style={{ color: "var(--accent)" }}>*</span></Label>
-              <Input id="create-name" name="name" placeholder="Ironwood IPA" required />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="create-type">Type</Label>
-              <Select defaultValue="pour" id="create-type" name="type">
-                <option value="pour">Pour</option>
-                <option value="food">Food</option>
-                <option value="merch">Merch</option>
-                <option value="event">Event listing</option>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="create-style">Style / Category</Label>
-              <Input id="create-style" name="style_or_category" placeholder="IPA, Stout…" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="create-abv">ABV (%)</Label>
-              <Input id="create-abv" name="abv" placeholder="6.7" step="0.1" type="number" />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="create-description">Description</Label>
-            <Textarea id="create-description" name="description" placeholder="Short tasting note or menu copy" rows={2} />
-          </div>
-          <div className="flex gap-2 mt-1">
-            <Button type="submit">+ Add item</Button>
-          </div>
-        </form>
+        <ItemTypeForm action={createAction} />
       </Card>
     </div>
   );

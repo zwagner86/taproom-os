@@ -5,6 +5,8 @@ import Link from "next/link";
 
 import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
 
+import { DateTimeField } from "@/components/date-time-field";
+import { EventEditPanel } from "@/components/event-edit-panel";
 import { getPaidEventGateCopy } from "@/lib/venue-payment-capability";
 import { createEventAction, updateEventAction } from "@/server/actions/events";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -92,11 +94,14 @@ export default async function VenueEventsPage({
             const dateParts = formatDate(event.starts_at).split(" ");
 
             return (
-              <Card key={event.id} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+              <Card
+                key={event.id}
+                style={{ display: "flex", gap: 16, alignItems: "flex-start", position: "relative" }}
+              >
                 {/* Date chip */}
                 <div
-                  className="flex-shrink-0 text-center rounded-[10px] py-2.5"
-                  style={{ width: 56, background: "var(--accent-light)" }}
+                  className="flex-shrink-0 text-center rounded-[10px] px-3 py-2.5"
+                  style={{ minWidth: 56, background: "var(--accent-light)" }}
                 >
                   <div
                     className="text-[10px] font-bold uppercase tracking-[0.8px]"
@@ -112,9 +117,9 @@ export default async function VenueEventsPage({
                   </div>
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-bold text-[15px]">{event.title}</span>
+                <div className="flex-1 min-w-0 py-0.5">
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    <span className="font-bold text-[15px]" style={{ color: "var(--c-text)" }}>{event.title}</span>
                     <Badge variant={
                       event.status === "published" ? "success" :
                       event.status === "cancelled" ? "error" :
@@ -128,13 +133,18 @@ export default async function VenueEventsPage({
                       <Badge variant="accent">{formatCurrency(event.price_cents, event.currency)}</Badge>
                     )}
                   </div>
-                  <div className="text-[13px] mb-1.5" style={{ color: "var(--c-muted)" }}>
-                    {formatDate(event.starts_at)} · Cap: {event.capacity ?? "Open"}
+
+                  <div className="text-[13px] mb-2" style={{ color: "var(--c-muted)" }}>
+                    {formatDate(event.starts_at)}{event.capacity != null ? ` · Cap: ${event.capacity}` : ""}
                   </div>
+
                   {event.description && (
-                    <div className="text-[13px] leading-relaxed mb-2">{event.description}</div>
+                    <div className="text-[13px] leading-relaxed mb-2" style={{ color: "var(--c-muted)" }}>
+                      {event.description}
+                    </div>
                   )}
-                  <div className="flex gap-3 text-[12.5px]" style={{ color: "var(--c-muted)" }}>
+
+                  <div className="flex gap-4 text-[12.5px]" style={{ color: "var(--c-muted)" }}>
                     <span>🎟 {confirmedSeats} booked</span>
                     <Link
                       className="font-semibold"
@@ -153,63 +163,12 @@ export default async function VenueEventsPage({
                   </div>
                 </div>
 
-                {/* Inline edit */}
-                <details className="flex-shrink-0">
-                  <summary className="cursor-pointer">
-                    <Button size="sm" type="button" variant="secondary">Edit</Button>
-                  </summary>
-                  <div
-                    className="absolute z-10 mt-2 right-0 rounded-xl border border-rim bg-white shadow-modal p-4 w-[480px]"
-                    style={{ position: "relative" }}
-                  >
-                    <form action={updateAction} className="flex flex-col gap-3">
-                      <input name="event_id" type="hidden" value={event.id} />
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1 col-span-2">
-                          <Label htmlFor={`title-${event.id}`}>Title</Label>
-                          <Input defaultValue={event.title} id={`title-${event.id}`} name="title" required />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label htmlFor={`status-${event.id}`}>Status</Label>
-                          <Select defaultValue={event.status} id={`status-${event.id}`} name="status">
-                            <option value="draft">Draft</option>
-                            <option value="published">Published</option>
-                            <option value="archived">Archived</option>
-                            <option value="cancelled">Cancelled</option>
-                          </Select>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label htmlFor={`capacity-${event.id}`}>Capacity</Label>
-                          <Input defaultValue={event.capacity ?? ""} id={`capacity-${event.id}`} name="capacity" type="number" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label htmlFor={`price-${event.id}`}>Price (cents)</Label>
-                          <Input defaultValue={event.price_cents ?? ""} id={`price-${event.id}`} name="price_cents" type="number" />
-                          {!capability.canSellPaidEvents && (
-                            <span className="text-xs text-amber-600">{getPaidEventGateCopy()}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label htmlFor={`starts-${event.id}`}>Starts at</Label>
-                          <Input
-                            defaultValue={toDateTimeLocal(event.starts_at)}
-                            id={`starts-${event.id}`}
-                            name="starts_at"
-                            required
-                            type="datetime-local"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1 col-span-2">
-                          <Label htmlFor={`desc-${event.id}`}>Description</Label>
-                          <Textarea defaultValue={event.description ?? ""} id={`desc-${event.id}`} name="description" rows={2} />
-                        </div>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" type="submit">Save changes</Button>
-                      </div>
-                    </form>
-                  </div>
-                </details>
+                <EventEditPanel
+                  action={updateAction}
+                  canSellPaidEvents={capability.canSellPaidEvents}
+                  event={event}
+                  paidEventGateCopy={getPaidEventGateCopy()}
+                />
               </Card>
             );
           })}
@@ -243,14 +202,8 @@ export default async function VenueEventsPage({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="create-starts">Starts at <span style={{ color: "var(--accent)" }}>*</span></Label>
-              <Input id="create-starts" name="starts_at" required type="datetime-local" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="create-ends">Ends at</Label>
-              <Input id="create-ends" name="ends_at" type="datetime-local" />
-            </div>
+            <DateTimeField label="Starts at" name="starts_at" required />
+            <DateTimeField label="Ends at" name="ends_at" />
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="create-desc">Description</Label>
@@ -263,8 +216,4 @@ export default async function VenueEventsPage({
       </Card>
     </div>
   );
-}
-
-function toDateTimeLocal(value: string) {
-  return new Date(value).toISOString().slice(0, 16);
 }
