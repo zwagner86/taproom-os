@@ -3,12 +3,14 @@
 import { cn } from "../lib/cn";
 
 export function Toggle({
+  describedBy,
   checked,
   onChange,
   label,
   id,
   className,
 }: {
+  describedBy?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
@@ -22,6 +24,7 @@ export function Toggle({
     >
       <div className="relative w-10 h-[22px] flex-shrink-0">
         <input
+          aria-describedby={describedBy}
           checked={checked}
           className="sr-only"
           id={id}

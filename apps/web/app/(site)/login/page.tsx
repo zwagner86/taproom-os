@@ -28,7 +28,6 @@ export default async function LoginPage({
         </div>
       )}
 
-      {/* Mode switcher */}
       <div
         className="flex gap-0 rounded-lg border border-rim p-[3px] mb-4"
         style={{ background: "var(--c-bg2)" }}

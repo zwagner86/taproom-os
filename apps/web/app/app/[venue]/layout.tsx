@@ -32,6 +32,7 @@ export default async function VenueLayout({
       items: [
         { href: `/app/${venue}/setup`, label: "Venue Setup" },
         { href: `/app/${venue}/items`, label: "Item Management" },
+        { href: `/app/${venue}/displays`, label: "Displays" },
         { href: `/app/${venue}/events`, label: "Event Management" },
         { href: `/app/${venue}/memberships`, label: "Memberships" },
         { href: `/app/${venue}/followers`, label: "Followers" },

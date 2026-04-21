@@ -3,8 +3,6 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 
-import { SiteChrome } from "@/components/site-chrome";
-
 export const metadata: Metadata = {
   description: "TaproomOS keeps rotating menus, public pages, and venue operations in sync.",
   title: "TaproomOS",
@@ -13,10 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <SiteChrome />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

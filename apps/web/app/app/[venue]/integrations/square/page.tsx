@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Button, Card, Input, Label, Select } from "@taproom/ui";
+import { Badge, Button, Card, FieldHint, FieldLabel, Input, Select } from "@taproom/ui";
 
 import { startSquareConnectAction, linkSquareItemAction, syncSquareItemsAction } from "@/server/actions/providers";
 import { listVenueItems } from "@/server/repositories/items";
@@ -115,14 +115,29 @@ export default async function VenueSquarePage({
         <div>
           <Card style={{ marginBottom: 16 }}>
             <div className="text-sm font-semibold mb-3" style={{ color: "var(--c-text)" }}>Search Square catalog</div>
-            <form className="flex gap-2">
-              <Input
-                defaultValue={query}
-                name="q"
-                placeholder="IPA, flight, t-shirt..."
-                style={{ flex: 1 }}
-              />
-              <Button type="submit">Search</Button>
+            <form className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <FieldLabel
+                  htmlFor="square-search"
+                  info="Search looks through connected Square catalog variations, so you can find the exact item or size you want to link."
+                >
+                  Search query
+                </FieldLabel>
+                <div className="flex gap-2">
+                  <Input
+                    aria-describedby="square-search-hint"
+                    defaultValue={query}
+                    id="square-search"
+                    name="q"
+                    placeholder="IPA, flight, t-shirt..."
+                    style={{ flex: 1 }}
+                  />
+                  <Button type="submit">Search</Button>
+                </div>
+                <FieldHint id="square-search-hint">
+                  Search by item name, variation name, or keywords your staff already uses in Square.
+                </FieldHint>
+              </div>
             </form>
           </Card>
 
@@ -156,23 +171,39 @@ export default async function VenueSquarePage({
                       </div>
                       <form action={linkAction} className="flex gap-2">
                         <input name="external_id" type="hidden" value={result.id} />
-                        <Select
-                          defaultValue=""
-                          id={`link-item-${result.id}`}
-                          name="item_id"
-                          required
-                          style={{ flex: 1 }}
-                        >
-                          <option disabled value="">Link to item…</option>
-                          {items
-                            .filter((item) => item.type !== "event")
-                            .map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.name}
-                              </option>
-                            ))}
-                        </Select>
-                        <Button size="sm" type="submit">Link</Button>
+                        <div className="flex-1">
+                          <div className="flex flex-col gap-1">
+                            <FieldLabel
+                              htmlFor={`link-item-${result.id}`}
+                              info="Linking connects this Square variation to one TaproomOS menu item so live pricing and availability snapshots can stay in sync."
+                            >
+                              Link to TaproomOS item
+                            </FieldLabel>
+                            <div className="flex gap-2">
+                              <Select
+                                aria-describedby={`link-item-${result.id}-hint`}
+                                defaultValue=""
+                                id={`link-item-${result.id}`}
+                                name="item_id"
+                                required
+                                style={{ flex: 1 }}
+                              >
+                                <option disabled value="">Link to item…</option>
+                                {items
+                                  .filter((item) => item.type !== "event")
+                                  .map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                      {item.name}
+                                    </option>
+                                  ))}
+                              </Select>
+                              <Button size="sm" type="submit">Link</Button>
+                            </div>
+                            <FieldHint id={`link-item-${result.id}-hint`}>
+                              Choose the internal menu item that should receive price and availability snapshots from this Square variation.
+                            </FieldHint>
+                          </div>
+                        </div>
                       </form>
                     </Card>
                   ))}

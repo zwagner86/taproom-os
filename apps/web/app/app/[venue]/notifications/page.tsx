@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
+import { Badge, Button, Card, FieldHint, FieldLabel, Input, Select, Textarea } from "@taproom/ui";
 
 import { sendBroadcastAction } from "@/server/actions/notifications";
 import { listVenueNotificationLogs } from "@/server/repositories/notifications";
@@ -49,19 +49,56 @@ export default async function VenueNotificationsPage({
 
           <form action={action} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="broadcast-channel">Channel</Label>
-              <Select defaultValue="email" id="broadcast-channel" name="channel">
+              <FieldLabel
+                htmlFor="broadcast-channel"
+                info="Email sends to followers who opted into email. SMS sends to followers who provided a phone number and opted into text updates."
+              >
+                Channel
+              </FieldLabel>
+              <Select aria-describedby="broadcast-channel-hint" defaultValue="email" id="broadcast-channel" name="channel">
                 <option value="email">✉️ Email</option>
                 <option value="sms">📱 SMS</option>
               </Select>
+              <FieldHint id="broadcast-channel-hint">
+                Choose which group of opted-in followers should receive this broadcast.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="broadcast-subject">Subject (email only)</Label>
-              <Input id="broadcast-subject" name="subject" placeholder={`${access.venue.name} update`} />
+              <FieldLabel
+                htmlFor="broadcast-subject"
+                info="Subject lines are only used for email sends. SMS broadcasts ignore this field."
+              >
+                Subject (email only)
+              </FieldLabel>
+              <Input
+                aria-describedby="broadcast-subject-hint"
+                id="broadcast-subject"
+                name="subject"
+                placeholder={`${access.venue.name} update`}
+              />
+              <FieldHint id="broadcast-subject-hint">
+                Keep it short so email recipients can understand the update at a glance.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="broadcast-body">Message <span style={{ color: "var(--accent)" }}>*</span></Label>
-              <Textarea id="broadcast-body" name="body" placeholder="What should fans know?" required rows={4} />
+              <FieldLabel
+                htmlFor="broadcast-body"
+                info="Write the full message you want followers to receive. Keep SMS sends shorter, because long text messages may be split by carriers."
+                required
+              >
+                Message
+              </FieldLabel>
+              <Textarea
+                aria-describedby="broadcast-body-hint"
+                id="broadcast-body"
+                name="body"
+                placeholder="What should fans know?"
+                required
+                rows={4}
+              />
+              <FieldHint id="broadcast-body-hint">
+                This message is sent as-is to all active followers for the selected channel.
+              </FieldHint>
             </div>
             <div
               className="rounded-lg px-3 py-2.5 text-[12px] leading-relaxed"

@@ -32,6 +32,41 @@ export type Database = {
           venue_id?: string;
         };
       };
+      display_presets: {
+        Row: {
+          config: Json;
+          created_at: string;
+          default_surface: string;
+          id: string;
+          kind: string;
+          name: string;
+          slug: string;
+          updated_at: string;
+          venue_id: string;
+        };
+        Insert: {
+          config?: Json;
+          created_at?: string;
+          default_surface?: string;
+          id?: string;
+          kind?: string;
+          name: string;
+          slug: string;
+          updated_at?: string;
+          venue_id: string;
+        };
+        Update: {
+          config?: Json;
+          created_at?: string;
+          default_surface?: string;
+          id?: string;
+          kind?: string;
+          name?: string;
+          slug?: string;
+          updated_at?: string;
+          venue_id?: string;
+        };
+      };
       event_bookings: {
         Row: {
           booking_status: Database["public"]["Enums"]["booking_status"];

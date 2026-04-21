@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { Tag } from "lucide-react";
 
-import { Alert, Badge, Button, Card, DataTable, EmptyState, Input, Label, PageHeader, Select, Textarea } from "@taproom/ui";
+import { Alert, Badge, Button, Card, DataTable, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@taproom/ui";
 
 import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import {
@@ -100,31 +100,87 @@ export default async function VenueMembershipsPage({
                   <form action={updateAction} className="mt-3 flex flex-col gap-3">
                     <input name="plan_id" type="hidden" value={plan.id} />
                     <div className="flex flex-col gap-1">
-                      <Label htmlFor={`plan-name-${plan.id}`}>Plan name</Label>
-                      <Input defaultValue={plan.name} id={`plan-name-${plan.id}`} name="name" required />
+                      <FieldLabel htmlFor={`plan-name-${plan.id}`} required>Plan name</FieldLabel>
+                      <Input
+                        aria-describedby={`plan-name-${plan.id}-hint`}
+                        defaultValue={plan.name}
+                        id={`plan-name-${plan.id}`}
+                        name="name"
+                        required
+                      />
+                      <FieldHint id={`plan-name-${plan.id}-hint`}>
+                        This name appears on internal plan lists, Stripe-backed memberships, and your public signup page.
+                      </FieldHint>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <Label htmlFor={`plan-price-${plan.id}`}>Price (cents)</Label>
-                        <Input defaultValue={plan.price_cents} id={`plan-price-${plan.id}`} name="price_cents" type="number" />
+                        <FieldLabel
+                          htmlFor={`plan-price-${plan.id}`}
+                          info="Membership prices are stored in cents, so use 2500 for a $25.00 plan."
+                        >
+                          Price (cents)
+                        </FieldLabel>
+                        <Input
+                          aria-describedby={`plan-price-${plan.id}-hint`}
+                          defaultValue={plan.price_cents}
+                          id={`plan-price-${plan.id}`}
+                          name="price_cents"
+                          type="number"
+                        />
+                        <FieldHint id={`plan-price-${plan.id}-hint`}>
+                          Enter the amount to charge each billing cycle in cents.
+                        </FieldHint>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <Label htmlFor={`plan-interval-${plan.id}`}>Interval</Label>
-                        <Select defaultValue={plan.billing_interval} id={`plan-interval-${plan.id}`} name="billing_interval">
+                        <FieldLabel
+                          htmlFor={`plan-interval-${plan.id}`}
+                          info="Billing interval controls how often TaproomOS and Stripe renew the plan."
+                        >
+                          Interval
+                        </FieldLabel>
+                        <Select
+                          aria-describedby={`plan-interval-${plan.id}-hint`}
+                          defaultValue={plan.billing_interval}
+                          id={`plan-interval-${plan.id}`}
+                          name="billing_interval"
+                        >
                           <option value="month">Monthly</option>
                           <option value="quarter">Quarterly</option>
                           <option value="year">Yearly</option>
                         </Select>
+                        <FieldHint id={`plan-interval-${plan.id}-hint`}>
+                          Choose how often members should be charged and receive plan benefits.
+                        </FieldHint>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Label htmlFor={`plan-desc-${plan.id}`}>Description</Label>
-                      <Textarea defaultValue={plan.description ?? ""} id={`plan-desc-${plan.id}`} name="description" rows={2} />
+                      <FieldLabel htmlFor={`plan-desc-${plan.id}`}>Description</FieldLabel>
+                      <Textarea
+                        aria-describedby={`plan-desc-${plan.id}-hint`}
+                        defaultValue={plan.description ?? ""}
+                        id={`plan-desc-${plan.id}`}
+                        name="description"
+                        rows={2}
+                      />
+                      <FieldHint id={`plan-desc-${plan.id}-hint`}>
+                        Explain what members get each cycle so staff and guests can tell plans apart.
+                      </FieldHint>
                     </div>
-                    <label className="flex items-center gap-2 text-[13.5px] cursor-pointer" style={{ color: "var(--c-text)" }}>
-                      <input defaultChecked={plan.active} name="active" type="checkbox" />
-                      Allow public signup
-                    </label>
+                    <div className="flex flex-col gap-1">
+                      <label className="flex items-center gap-2 text-[13.5px] cursor-pointer" htmlFor={`plan-active-${plan.id}`} style={{ color: "var(--c-text)" }}>
+                        <input
+                          aria-describedby={`plan-active-${plan.id}-hint`}
+                          defaultChecked={plan.active}
+                          id={`plan-active-${plan.id}`}
+                          name="active"
+                          type="checkbox"
+                        />
+                        Allow public signup
+                      </label>
+                      <FieldHint id={`plan-active-${plan.id}-hint`}>
+                        Turn this on to show the plan on your public membership page. Turn it off to hide the plan without deleting existing members.
+                      </FieldHint>
+                    </div>
                     <Button size="sm" type="submit">Save plan</Button>
                   </form>
                 </details>
@@ -139,34 +195,72 @@ export default async function VenueMembershipsPage({
         <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New membership plan</div>
         <form action={createAction} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="create-plan-name">Plan name <span style={{ color: "var(--accent)" }}>*</span></Label>
-            <Input id="create-plan-name" name="name" placeholder="Mug Club Gold" required />
+            <FieldLabel htmlFor="create-plan-name" required>Plan name</FieldLabel>
+            <Input aria-describedby="create-plan-name-hint" id="create-plan-name" name="name" placeholder="Mug Club Gold" required />
+            <FieldHint id="create-plan-name-hint">
+              This is the public and internal name for the membership option guests can choose.
+            </FieldHint>
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="create-plan-desc">Description</Label>
-            <Textarea id="create-plan-desc" name="description" placeholder="What members get each cycle" rows={2} />
+            <FieldLabel htmlFor="create-plan-desc">Description</FieldLabel>
+            <Textarea
+              aria-describedby="create-plan-desc-hint"
+              id="create-plan-desc"
+              name="description"
+              placeholder="What members get each cycle"
+              rows={2}
+            />
+            <FieldHint id="create-plan-desc-hint">
+              Describe the perks, pours, discounts, or pickups members receive each billing cycle.
+            </FieldHint>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="create-plan-price">Price (cents) <span style={{ color: "var(--accent)" }}>*</span></Label>
-              <Input id="create-plan-price" name="price_cents" placeholder="2500" type="number" />
+              <FieldLabel
+                htmlFor="create-plan-price"
+                info="Membership prices are stored in cents, so 2500 becomes $25.00 on the public page and checkout."
+                required
+              >
+                Price (cents)
+              </FieldLabel>
+              <Input
+                aria-describedby={`create-plan-price-hint${!capability.canSellMemberships ? " create-plan-price-gate" : ""}`}
+                id="create-plan-price"
+                name="price_cents"
+                placeholder="2500"
+                type="number"
+              />
+              <FieldHint id="create-plan-price-hint">Enter the recurring charge amount in cents for each billing interval.</FieldHint>
               {!capability.canSellMemberships && (
-                <span className="text-xs text-amber-600">{getMembershipGateCopy()}</span>
+                <span className="text-xs text-amber-600" id="create-plan-price-gate">{getMembershipGateCopy()}</span>
               )}
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="create-plan-interval">Billing interval</Label>
-              <Select defaultValue="month" id="create-plan-interval" name="billing_interval">
+              <FieldLabel
+                htmlFor="create-plan-interval"
+                info="Billing interval decides how often members renew and how the plan is labeled publicly."
+              >
+                Billing interval
+              </FieldLabel>
+              <Select aria-describedby="create-plan-interval-hint" defaultValue="month" id="create-plan-interval" name="billing_interval">
                 <option value="month">Monthly</option>
                 <option value="quarter">Quarterly</option>
                 <option value="year">Yearly</option>
               </Select>
+              <FieldHint id="create-plan-interval-hint">
+                Choose the cadence for billing and benefits, such as monthly pours or yearly mug renewals.
+              </FieldHint>
             </div>
           </div>
-          <label className="flex items-center gap-2 text-[13.5px] cursor-pointer" style={{ color: "var(--c-text)" }}>
-            <input defaultChecked name="active" type="checkbox" />
-            Allow public signup
-          </label>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-[13.5px] cursor-pointer" htmlFor="create-plan-active" style={{ color: "var(--c-text)" }}>
+              <input aria-describedby="create-plan-active-hint" defaultChecked id="create-plan-active" name="active" type="checkbox" />
+              Allow public signup
+            </label>
+            <FieldHint id="create-plan-active-hint">
+              Leave this on if guests should be able to join immediately from your public membership page.
+            </FieldHint>
+          </div>
           <Button type="submit">Create plan</Button>
         </form>
       </Card>

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Alert, Button, Card, Input, Label, Select } from "@taproom/ui";
+import { Alert, Button, Card, FieldHint, FieldLabel, Input, Select } from "@taproom/ui";
 
 import { AccentPresetPicker } from "@/components/accent-preset-picker";
 import type { VenueSettingsState } from "@/server/actions/venues";
@@ -27,31 +27,43 @@ export function VenueSettingsForm({
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="name">Venue name</Label>
-              <Input defaultValue={venue.name} id="name" name="name" required />
+              <FieldLabel htmlFor="name" required>Venue name</FieldLabel>
+              <Input aria-describedby="venue-name-hint" defaultValue={venue.name} id="name" name="name" required />
+              <FieldHint id="venue-name-hint">
+                This is the primary venue name shown throughout the admin and on public-facing pages.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="venue_type">Venue type</Label>
-              <Select defaultValue={venue.venue_type} id="venue_type" name="venue_type">
+              <FieldLabel
+                htmlFor="venue_type"
+                info="Venue type helps TaproomOS describe the business consistently in setup flows and labels, but it does not change your billing or permissions."
+              >
+                Venue type
+              </FieldLabel>
+              <Select aria-describedby="venue-type-hint" defaultValue={venue.venue_type} id="venue_type" name="venue_type">
                 <option value="brewery">Brewery</option>
                 <option value="cidery">Cidery</option>
                 <option value="meadery">Meadery</option>
                 <option value="distillery">Distillery</option>
                 <option value="taproom">Taproom</option>
               </Select>
+              <FieldHint id="venue-type-hint">
+                Choose the closest fit for how your venue should be described across TaproomOS.
+              </FieldHint>
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="tagline">Tagline</Label>
+            <FieldLabel htmlFor="tagline">Tagline</FieldLabel>
             <Input
+              aria-describedby="tagline-hint"
               defaultValue={venue.tagline ?? ""}
               id="tagline"
               name="tagline"
               placeholder="Small batch. Big character."
             />
-            <span className="text-xs" style={{ color: "var(--c-muted)" }}>
+            <FieldHint id="tagline-hint">
               Shown on your public menu and event pages.
-            </span>
+            </FieldHint>
           </div>
         </div>
       </Card>
@@ -63,19 +75,30 @@ export function VenueSettingsForm({
         </p>
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="menu_label">Menu label</Label>
-            <Input defaultValue={venue.menu_label} id="menu_label" name="menu_label" placeholder="Tap List" />
-            <span className="text-xs" style={{ color: "var(--c-muted)" }}>e.g. Tap List, Pour List, Menu</span>
+            <FieldLabel
+              htmlFor="menu_label"
+              info="This label is reused anywhere your main list of pours, food, or merch is referenced. Use the language your staff and guests already know."
+            >
+              Menu label
+            </FieldLabel>
+            <Input aria-describedby="menu-label-hint" defaultValue={venue.menu_label} id="menu_label" name="menu_label" placeholder="Tap List" />
+            <FieldHint id="menu-label-hint">Use a label like Tap List, Pour List, or Menu.</FieldHint>
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="membership_label">Membership label</Label>
+            <FieldLabel
+              htmlFor="membership_label"
+              info="This label appears on membership admin screens and public membership signup pages."
+            >
+              Membership label
+            </FieldLabel>
             <Input
+              aria-describedby="membership-label-hint"
               defaultValue={venue.membership_label}
               id="membership_label"
               name="membership_label"
               placeholder="Mug Club"
             />
-            <span className="text-xs" style={{ color: "var(--c-muted)" }}>e.g. Mug Club, Beer Club</span>
+            <FieldHint id="membership-label-hint">Use a label like Mug Club, Beer Club, or Bottle Society.</FieldHint>
           </div>
         </div>
       </Card>
@@ -85,15 +108,21 @@ export function VenueSettingsForm({
         <div className="flex flex-col gap-4">
           <AccentPresetPicker defaultValue={venue.accent_color} />
           <div className="flex flex-col gap-1">
-            <Label htmlFor="logo_url">Logo URL</Label>
+            <FieldLabel
+              htmlFor="logo_url"
+              info="The logo is used when a surface supports venue branding. If you leave this blank, TaproomOS will fall back to text-only branding."
+            >
+              Logo URL
+            </FieldLabel>
             <Input
+              aria-describedby="logo-url-hint"
               defaultValue={venue.logo_url ?? ""}
               id="logo_url"
               name="logo_url"
               placeholder="https://yourbrewery.com/logo.png"
               type="url"
             />
-            <span className="text-xs" style={{ color: "var(--c-muted)" }}>Square format recommended.</span>
+            <FieldHint id="logo-url-hint">Square or near-square images work best for badges, cards, and display headers.</FieldHint>
           </div>
         </div>
       </Card>

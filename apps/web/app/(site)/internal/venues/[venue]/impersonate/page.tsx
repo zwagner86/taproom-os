@@ -53,6 +53,9 @@ export default async function ImpersonateVenuePage({ params }: { params: Promise
           <Link href={`/app/${venue.slug}/items` as Route}>
             <Button variant="secondary">Jump to items</Button>
           </Link>
+          <Link href={`/app/${venue.slug}/displays` as Route}>
+            <Button variant="secondary">Displays</Button>
+          </Link>
           <Link href={`/app/${venue.slug}/events` as Route}>
             <Button variant="secondary">Events</Button>
           </Link>

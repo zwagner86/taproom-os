@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { Calendar } from "lucide-react";
 
-import { Alert, Badge, Button, Card, EmptyState, Input, Label, PageHeader, Select, Textarea } from "@taproom/ui";
+import { Alert, Badge, Button, Card, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@taproom/ui";
 
 import { DateTimeField } from "@/components/date-time-field";
 import { EventEditPanel } from "@/components/event-edit-panel";
@@ -161,34 +161,87 @@ export default async function VenueEventsPage({
         <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New event</div>
         <form action={createAction} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="create-title">Title <span style={{ color: "var(--accent)" }}>*</span></Label>
-            <Input id="create-title" name="title" placeholder="Trivia Night" required />
+            <FieldLabel htmlFor="create-title" required>Title</FieldLabel>
+            <Input aria-describedby="create-title-hint" id="create-title" name="title" placeholder="Trivia Night" required />
+            <FieldHint id="create-title-hint">
+              This title appears on the public event page, check-in screen, and admin event list.
+            </FieldHint>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="create-capacity">Capacity</Label>
-              <Input id="create-capacity" name="capacity" placeholder="80" type="number" />
+              <FieldLabel
+                htmlFor="create-capacity"
+                info="Capacity limits how many total seats or spots can be booked for the event."
+              >
+                Capacity
+              </FieldLabel>
+              <Input aria-describedby="create-capacity-hint" id="create-capacity" name="capacity" placeholder="80" type="number" />
+              <FieldHint id="create-capacity-hint">
+                Leave this blank if the event does not have a booking cap.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="create-price">Price (cents)</Label>
-              <Input id="create-price" name="price_cents" placeholder="1500" type="number" />
-              <span className="text-xs" style={{ color: "var(--c-muted)" }}>Leave empty for free</span>
+              <FieldLabel
+                htmlFor="create-price"
+                info="Prices are stored in cents, so enter 1500 for a $15.00 ticket."
+              >
+                Price (cents)
+              </FieldLabel>
+              <Input
+                aria-describedby={`create-price-hint${!capability.canSellPaidEvents ? " create-price-gate" : ""}`}
+                id="create-price"
+                name="price_cents"
+                placeholder="1500"
+                type="number"
+              />
+              <FieldHint id="create-price-hint">Leave this blank or set it to `0` to make the event free.</FieldHint>
+              {!capability.canSellPaidEvents && (
+                <span className="text-xs text-amber-600" id="create-price-gate">{getPaidEventGateCopy()}</span>
+              )}
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="create-status">Status</Label>
-              <Select defaultValue="draft" id="create-status" name="status">
+              <FieldLabel
+                htmlFor="create-status"
+                info="Draft keeps the event hidden until you are ready. Published shows it on public event listings."
+              >
+                Status
+              </FieldLabel>
+              <Select aria-describedby="create-status-hint" defaultValue="draft" id="create-status" name="status">
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
               </Select>
+              <FieldHint id="create-status-hint">
+                Start with Draft if you still need to confirm details before guests can see the event.
+              </FieldHint>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <DateTimeField label="Starts at" name="starts_at" required />
-            <DateTimeField label="Ends at" name="ends_at" />
+            <DateTimeField
+              hint="Set the local start date and time that should appear on tickets, listings, and check-in tools."
+              info="Use your venue's local time. This field is required for every event."
+              label="Starts at"
+              name="starts_at"
+              required
+            />
+            <DateTimeField
+              hint="Optional. Add an end time if you want guests and staff to see when the event wraps up."
+              info="Leave this empty for open-ended events or when only the start time matters."
+              label="Ends at"
+              name="ends_at"
+            />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="create-desc">Description</Label>
-            <Textarea id="create-desc" name="description" placeholder="Short event copy for the public page" rows={2} />
+            <FieldLabel htmlFor="create-desc">Description</FieldLabel>
+            <Textarea
+              aria-describedby="create-desc-hint"
+              id="create-desc"
+              name="description"
+              placeholder="Short event copy for the public page"
+              rows={2}
+            />
+            <FieldHint id="create-desc-hint">
+              Optional copy shown on the public event page and on displays when descriptions are enabled.
+            </FieldHint>
           </div>
           <div className="flex gap-2">
             <Button type="submit">Create event</Button>

@@ -79,7 +79,7 @@ export default async function HomePage() {
             Welcome back.
           </h1>
           <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            Start with venue setup and items, then grow into events, memberships, and notifications.
+            Start with venue setup and items, then grow into events, memberships, notifications, and displays.
           </p>
         </div>
         <div className="flex gap-3 flex-shrink-0">
@@ -108,7 +108,7 @@ export default async function HomePage() {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {venues.map((venue) => (
             <Card key={venue.id}>
               <div className="mb-4">
@@ -121,17 +121,17 @@ export default async function HomePage() {
               <div className="flex flex-col gap-2">
                 <Link
                   className="w-full block text-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white transition"
-                  href={`/app/${venue.slug}/items` as Route}
+                  href={`/app/${venue.slug}/displays` as Route}
                   style={{ background: "var(--c-sidebar)" }}
                 >
-                  Manage items
+                  Manage displays
                 </Link>
                 <Link
                   className="w-full block text-center rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition"
-                  href={`/v/${venue.slug}/menu` as Route}
+                  href={`/app/${venue.slug}/items` as Route}
                   style={{ borderColor: "var(--c-border)", color: "var(--c-text)" }}
                 >
-                  Public menu
+                  Manage items
                 </Link>
               </div>
             </Card>

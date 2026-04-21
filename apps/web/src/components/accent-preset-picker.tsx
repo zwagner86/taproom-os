@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Input, Label } from "@taproom/ui";
+import { FieldHint, FieldLabel, Input } from "@taproom/ui";
 
 const ACCENT_PRESETS = [
   { label: "Amber", value: "oklch(62% 0.18 65)" },
@@ -19,11 +19,15 @@ type AccentPresetPickerProps = {
 
 export function AccentPresetPicker({ defaultValue }: AccentPresetPickerProps) {
   const [value, setValue] = useState(defaultValue ?? "");
+  const presetsHintId = "accent-presets-hint";
+  const colorHintId = "accent-color-hint";
 
   return (
     <>
       <div>
-        <Label>Accent color presets</Label>
+        <FieldLabel info="Presets give you a quick starting point for buttons, badges, links, and other accent treatments across the admin and public surfaces.">
+          Accent color presets
+        </FieldLabel>
         <div className="flex gap-2 flex-wrap mt-2">
           {ACCENT_PRESETS.map((preset) => {
             const isSelected = value === preset.value;
@@ -50,16 +54,28 @@ export function AccentPresetPicker({ defaultValue }: AccentPresetPickerProps) {
             );
           })}
         </div>
+        <FieldHint id={presetsHintId}>
+          Pick a preset to populate the color field below with a reusable brand accent.
+        </FieldHint>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="accent_color">Accent color</Label>
+        <FieldLabel
+          htmlFor="accent_color"
+          info="Enter a valid CSS color string. The app currently stores and previews OKLCH values, so using the presets is the safest option."
+        >
+          Accent color
+        </FieldLabel>
         <Input
+          aria-describedby={colorHintId}
           id="accent_color"
           name="accent_color"
           onChange={(e) => setValue(e.target.value)}
           placeholder="oklch(62% 0.18 65)"
           value={value}
         />
+        <FieldHint id={colorHintId}>
+          This color drives the primary highlight color across venue admin and public views.
+        </FieldHint>
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Badge, Button, Card, Input, Label, Select } from "@taproom/ui";
+import { Badge, Button, Card, FieldHint, FieldLabel, Input, Select } from "@taproom/ui";
 
 import { createVenueAsPlatformAction } from "@/server/actions/venues";
 import { isPlatformAdmin, requireUser } from "@/server/auth";
@@ -53,37 +53,57 @@ export default async function InternalVenuesPage({
       )}
 
       <div className="grid grid-cols-[1fr_1.5fr] gap-6 items-start">
-        {/* Create form */}
         <Card>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New venue shell</div>
           <form action={createVenueAsPlatformAction} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="venue-name">Venue name <span style={{ color: "var(--accent)" }}>*</span></Label>
-              <Input id="venue-name" name="name" placeholder="Driftline Cider House" required />
+              <FieldLabel htmlFor="venue-name" required>Venue name</FieldLabel>
+              <Input aria-describedby="internal-venue-name-hint" id="venue-name" name="name" placeholder="Driftline Cider House" required />
+              <FieldHint id="internal-venue-name-hint">
+                Create the shell with the same venue name the operator expects to use publicly.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="venue-slug">Slug</Label>
-              <Input id="venue-slug" name="slug" placeholder="driftline-cider-house" />
+              <FieldLabel
+                htmlFor="venue-slug"
+                info="If left blank, the slug will be generated from the venue name. Slugs are used in admin and public URLs."
+              >
+                Slug
+              </FieldLabel>
+              <Input aria-describedby="internal-venue-slug-hint" id="venue-slug" name="slug" placeholder="driftline-cider-house" />
+              <FieldHint id="internal-venue-slug-hint">
+                Lowercase letters, numbers, and hyphens only.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="venue-type">Venue type</Label>
-              <Select defaultValue="brewery" id="venue-type" name="venue_type">
+              <FieldLabel htmlFor="venue-type">Venue type</FieldLabel>
+              <Select aria-describedby="internal-venue-type-hint" defaultValue="brewery" id="venue-type" name="venue_type">
                 <option value="brewery">Brewery</option>
                 <option value="cidery">Cidery</option>
                 <option value="meadery">Meadery</option>
                 <option value="distillery">Distillery</option>
                 <option value="taproom">Taproom</option>
               </Select>
+              <FieldHint id="internal-venue-type-hint">
+                Choose the closest venue category for terminology and internal description purposes.
+              </FieldHint>
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="owner-email">Owner email</Label>
-              <Input id="owner-email" name="owner_email" placeholder="owner@venue.com" type="email" />
+              <FieldLabel
+                htmlFor="owner-email"
+                info="If provided, TaproomOS will try to invite this person and attach them as the venue owner. Leave blank to keep ownership with the current platform admin for now."
+              >
+                Owner email
+              </FieldLabel>
+              <Input aria-describedby="internal-owner-email-hint" id="owner-email" name="owner_email" placeholder="owner@venue.com" type="email" />
+              <FieldHint id="internal-owner-email-hint">
+                Use the future venue owner’s email if you want them invited during provisioning.
+              </FieldHint>
             </div>
             <Button type="submit">Create venue shell</Button>
           </form>
         </Card>
 
-        {/* Venues list */}
         <div>
           <div
             className="text-[13px] font-bold uppercase tracking-[0.8px] mb-3"
