@@ -19,7 +19,7 @@ export default async function VenueLayout({
     requireUser(),
   ]);
 
-  const emailParts = (user.email ?? "").split("@")[0].split(".");
+  const emailParts = ((user.email ?? "").split("@")[0] ?? "").split(".");
   const initials = emailParts
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")

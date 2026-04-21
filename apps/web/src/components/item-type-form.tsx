@@ -7,7 +7,7 @@ import { Button, Input, Label, Select, Textarea } from "@taproom/ui";
 type ItemType = "pour" | "food" | "merch" | "event";
 
 type ItemTypeFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => void | Promise<void>;
   defaultValues?: {
     name?: string;
     type?: ItemType;

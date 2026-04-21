@@ -1,3 +1,7 @@
+// VenueSidebar is a card-based secondary navigation component intended for
+// internal admin or future operator-facing route contexts that aren't yet
+// implemented (e.g. /internal/[venue]). The active /app/[venue] shell uses
+// AppShell instead. Do not delete — keep as the pill-nav pattern reference.
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -39,7 +43,7 @@ export function VenueSidebar({ venue }: { venue: VenueRow }) {
         ))}
       </nav>
 
-      <div className="rounded-3xl bg-pine/8 p-4 text-sm leading-6 text-ink/65">
+      <div className="rounded-3xl bg-mist p-4 text-sm leading-6 text-ink/65">
         Operator-assisted onboarding is the default in MVP. Self-serve venue creation is available, but internal setup remains the fastest path.
       </div>
     </Card>

@@ -13,3 +13,4 @@ node_modules
 .env.*.local
 apps/web/.dev.vars
 supabase/.temp/
+apps/web/tsconfig.tsbuildinfo

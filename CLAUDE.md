@@ -125,3 +125,13 @@ Optional: `seed.sql` creates a `demo-taproom` venue.
 ## Testing
 
 Domain package (`packages/domain/src/index.test.ts`) contains business rule unit tests — run these when changing domain logic. Web app passes with no tests (`--passWithNoTests`). Use `pnpm --filter @taproom/domain test` to run domain tests in isolation.
+
+## Styling Convention
+
+**Tailwind semantic tokens for static values** — Use `text-ink`, `bg-mist`, `border-rim`, `text-muted`, `bg-sidebar`, `bg-parchment`, etc. for all fixed colors in `packages/ui` and admin pages. These map to the design tokens in `packages/config/src/tailwind-preset.ts`.
+
+**`style={{}}` only for runtime-dynamic values** — Inline styles are reserved for values that change per venue at runtime: `var(--accent)`, `var(--accent-light)`, `var(--accent-dark)`, and the collapsible sidebar width. Everything else belongs in Tailwind classes.
+
+**Never use raw Tailwind color classes** (`green-200`, `red-50`, `amber-800`, etc.) for feedback states — use the `<Alert variant="success|error|warning|info">` component from `@taproom/ui` instead.
+
+**`font-display` (Lora) is for public-facing editorial surfaces only** — menu headers, event titles, and the homepage hero. The admin shell uses zero Lora by design; it is a functional tool, not an editorial surface. Do not add `font-display` to admin pages or `packages/ui` components.

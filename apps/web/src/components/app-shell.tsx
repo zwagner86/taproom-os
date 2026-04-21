@@ -44,24 +44,17 @@ export function AppShell({
     venueName;
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--c-bg)" }}>
+    <div className="flex h-screen overflow-hidden bg-parchment">
       {/* Sidebar */}
       <aside
-        className="flex flex-shrink-0 flex-col overflow-hidden transition-[width] duration-200"
-        style={{
-          width: collapsed ? 52 : 220,
-          background: "var(--c-sidebar)",
-          height: "100vh",
-          position: "sticky",
-          top: 0,
-        }}
+        className="flex flex-shrink-0 flex-col overflow-hidden transition-[width] duration-200 bg-sidebar h-screen sticky top-0"
+        style={{ width: collapsed ? 52 : 220 }}
       >
         {/* Header */}
         <div
-          className="flex items-center border-b shrink-0"
+          className="flex items-center border-b border-white/[0.07] shrink-0"
           style={{
             padding: collapsed ? "18px 0" : "18px 16px",
-            borderColor: "rgba(255,255,255,0.07)",
             justifyContent: collapsed ? "center" : "space-between",
           }}
         >
@@ -69,22 +62,19 @@ export function AppShell({
             <>
               <div className="flex items-center gap-2">
                 <div
-                  className="flex items-center justify-center rounded-lg text-white font-black text-sm flex-shrink-0"
-                  style={{ width: 28, height: 28, background: "var(--accent)" }}
+                  className="flex items-center justify-center rounded-lg text-white font-black text-sm flex-shrink-0 w-7 h-7"
+                  style={{ background: "var(--accent)" }}
                 >
                   T
                 </div>
                 <div>
                   <div className="text-white text-[13px] font-bold leading-tight">TaproomOS</div>
-                  <div className="text-[10.5px] mt-px" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    {venueName}
-                  </div>
+                  <div className="text-[10.5px] mt-px text-white/40">{venueName}</div>
                 </div>
               </div>
               <button
-                className="border-none bg-transparent cursor-pointer text-lg leading-none p-0"
+                className="border-none bg-transparent cursor-pointer text-lg leading-none p-0 text-white/[0.35]"
                 onClick={() => setCollapsed(true)}
-                style={{ color: "rgba(255,255,255,0.35)" }}
                 type="button"
               >
                 ‹
@@ -92,8 +82,8 @@ export function AppShell({
             </>
           ) : (
             <div
-              className="flex items-center justify-center rounded-lg text-white font-black text-sm"
-              style={{ width: 28, height: 28, background: "var(--accent)" }}
+              className="flex items-center justify-center rounded-lg text-white font-black text-sm w-7 h-7"
+              style={{ background: "var(--accent)" }}
             >
               T
             </div>
@@ -102,9 +92,8 @@ export function AppShell({
 
         {collapsed && (
           <button
-            className="border-none bg-transparent cursor-pointer text-lg leading-none text-center py-2.5"
+            className="border-none bg-transparent cursor-pointer text-lg leading-none text-center py-2.5 text-white/[0.35]"
             onClick={() => setCollapsed(false)}
-            style={{ color: "rgba(255,255,255,0.35)" }}
             type="button"
           >
             ›
@@ -120,18 +109,12 @@ export function AppShell({
             <div className="mb-1" key={group.id}>
               {!collapsed && (
                 <button
-                  className="w-full flex items-center justify-between border-none bg-transparent cursor-pointer font-[inherit] uppercase tracking-[1px]"
+                  className="w-full flex items-center justify-between border-none bg-transparent cursor-pointer font-[inherit] uppercase tracking-[1px] px-4 pt-2 pb-1 text-[10px] font-bold text-white/[0.35]"
                   onClick={() => toggleGroup(group.id)}
-                  style={{
-                    padding: "8px 16px 4px",
-                    color: "rgba(255,255,255,0.35)",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
                   type="button"
                 >
                   {group.label}
-                  <span style={{ fontSize: 10 }}>{expanded[group.id] ? "▾" : "▸"}</span>
+                  <span className="text-[10px]">{expanded[group.id] ? "▾" : "▸"}</span>
                 </button>
               )}
               {(collapsed || expanded[group.id]) &&
@@ -139,39 +122,27 @@ export function AppShell({
                   const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
                   return (
                     <Link
+                      className="flex items-center gap-2 no-underline transition-all duration-100"
                       href={item.href as `/${string}`}
                       key={item.href}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
                         background: active ? "rgba(255,255,255,0.1)" : "transparent",
-                        border: "none",
-                        cursor: "pointer",
                         padding: collapsed ? "9px 0" : "8px 16px",
                         justifyContent: collapsed ? "center" : "flex-start",
                         borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
-                        transition: "all 0.1s",
-                        textDecoration: "none",
                       }}
                       title={collapsed ? item.label : undefined}
                     >
                       <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          background: active ? "var(--accent)" : "rgba(255,255,255,0.25)",
-                          flexShrink: 0,
-                        }}
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: active ? "var(--accent)" : "rgba(255,255,255,0.25)" }}
                       />
                       {!collapsed && (
                         <span
+                          className="text-[13px] leading-[1.3]"
                           style={{
-                            fontSize: 13,
                             color: active ? "#fff" : "rgba(255,255,255,0.6)",
                             fontWeight: active ? 500 : 400,
-                            lineHeight: 1.3,
                           }}
                         >
                           {item.label}
@@ -186,24 +157,17 @@ export function AppShell({
 
         {/* User footer */}
         {!collapsed && (
-          <div
-            className="shrink-0 border-t"
-            style={{ padding: "12px 16px", borderColor: "rgba(255,255,255,0.07)" }}
-          >
+          <div className="shrink-0 border-t border-white/[0.07] px-4 py-3">
             <div className="flex items-center gap-2">
               <div
-                className="flex items-center justify-center rounded-full text-white text-xs font-bold flex-shrink-0"
-                style={{ width: 28, height: 28, background: "var(--accent)" }}
+                className="flex items-center justify-center rounded-full text-white text-xs font-bold flex-shrink-0 w-7 h-7"
+                style={{ background: "var(--accent)" }}
               >
                 {userInitials}
               </div>
               <div>
-                <div className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.75)" }}>
-                  {userLabel}
-                </div>
-                <div className="text-[10.5px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  Venue Admin
-                </div>
+                <div className="text-xs font-medium text-white/75">{userLabel}</div>
+                <div className="text-[10.5px] text-white/[0.35]">Venue Admin</div>
               </div>
             </div>
           </div>
@@ -213,22 +177,17 @@ export function AppShell({
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <div
-          className="flex items-center flex-shrink-0 border-b bg-white gap-3"
-          style={{ height: 52, padding: "0 24px", borderColor: "var(--c-border)" }}
-        >
+        <div className="flex items-center flex-shrink-0 border-b border-rim bg-white gap-3 h-[52px] px-6">
           <div className="flex-1">
             <span className="text-[13.5px] font-semibold text-ink">{screenLabel}</span>
           </div>
           <div className="flex items-center gap-3">
-            <div
-              className="text-xs bg-mist border border-rim rounded-full px-2.5 py-1 text-muted"
-            >
+            <div className="text-xs bg-mist border border-rim rounded-full px-2.5 py-1 text-muted">
               {venueSlug}.taproomos.com
             </div>
             <div
-              className="flex items-center justify-center rounded-full text-white text-sm font-bold cursor-pointer"
-              style={{ width: 32, height: 32, background: "var(--accent)" }}
+              className="flex items-center justify-center rounded-full text-white text-sm font-bold cursor-pointer w-8 h-8"
+              style={{ background: "var(--accent)" }}
             >
               {userInitials}
             </div>
@@ -236,10 +195,7 @@ export function AppShell({
         </div>
 
         {/* Content */}
-        <main
-          className="flex-1 overflow-y-auto"
-          style={{ padding: 28 }}
-        >
+        <main className="flex-1 overflow-y-auto p-7">
           {children}
         </main>
       </div>

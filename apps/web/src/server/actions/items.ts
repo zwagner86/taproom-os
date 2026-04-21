@@ -9,7 +9,13 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 type ItemInsert = Database["public"]["Tables"]["items"]["Insert"];
 type ItemUpdate = Database["public"]["Tables"]["items"]["Update"];
 
-export async function createItemAction(venueSlug: string, formData: FormData) {
+export type ItemFormState = { message?: string; error?: string } | null;
+
+export async function createItemAction(
+  venueSlug: string,
+  _prevState: ItemFormState,
+  formData: FormData,
+): Promise<ItemFormState> {
   const access = await getVenueAccessOrRedirect(venueSlug);
   const supabase = await createServerSupabaseClient();
 
@@ -29,11 +35,11 @@ export async function createItemAction(venueSlug: string, formData: FormData) {
   const { error } = await supabase.from("items").insert(payload);
 
   if (error) {
-    redirect(`/app/${venueSlug}/items?error=${encodeURIComponent(error.message)}`);
+    return { error: error.message };
   }
 
   revalidateVenueContent(venueSlug);
-  redirect(`/app/${venueSlug}/items?message=${encodeURIComponent("Item created.")}`);
+  return { message: "Item created." };
 }
 
 export async function updateItemAction(venueSlug: string, formData: FormData) {
@@ -60,6 +66,13 @@ export async function updateItemAction(venueSlug: string, formData: FormData) {
 
   revalidateVenueContent(venueSlug);
   redirect(`/app/${venueSlug}/items?message=${encodeURIComponent("Item updated.")}`);
+}
+
+export async function toggleItemActiveAction(venueSlug: string, itemId: string, active: boolean): Promise<void> {
+  const access = await getVenueAccessOrRedirect(venueSlug);
+  const supabase = await createServerSupabaseClient();
+  await supabase.from("items").update({ active }).eq("id", itemId).eq("venue_id", access.venue.id);
+  revalidateVenueContent(venueSlug);
 }
 
 export async function deleteItemAction(venueSlug: string, formData: FormData) {

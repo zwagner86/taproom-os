@@ -127,7 +127,13 @@ export async function createVenueAsPlatformAction(formData: FormData) {
   redirect(`/internal/venues/${venue.slug}/impersonate`);
 }
 
-export async function updateVenueSettingsAction(venueSlug: string, formData: FormData) {
+export type VenueSettingsState = { message?: string; error?: string } | null;
+
+export async function updateVenueSettingsAction(
+  venueSlug: string,
+  _prevState: VenueSettingsState,
+  formData: FormData,
+): Promise<VenueSettingsState> {
   const access = await getVenueAccessOrRedirect(venueSlug);
   const supabase = await createServerSupabaseClient();
 
@@ -143,14 +149,14 @@ export async function updateVenueSettingsAction(venueSlug: string, formData: For
   const { error } = await supabase.from("venues").update(updates).eq("id", access.venue.id);
 
   if (error) {
-    redirect(`/app/${venueSlug}/setup?error=${encodeURIComponent(error.message)}`);
+    return { error: error.message };
   }
 
   revalidatePath(`/app/${venueSlug}/setup`);
   revalidatePath(`/v/${venueSlug}/menu`);
   revalidatePath(`/embed/${venueSlug}/menu`);
   revalidatePath(`/tv/${venueSlug}`);
-  redirect(`/app/${venueSlug}/setup?message=${encodeURIComponent("Venue settings saved.")}`);
+  return { message: "Venue settings saved." };
 }
 
 function normalizeOptionalString(value: FormDataEntryValue | null) {

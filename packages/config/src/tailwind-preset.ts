@@ -12,9 +12,7 @@ export const taproomTailwindPreset = {
         rim: "#DDD8D0",         // oklch(88% 0.012 70) — border
         muted: "#7B7370",       // oklch(52% 0.015 70) — muted text
         sidebar: "#181410",     // oklch(13% 0.02 55) — dark sidebar
-        // Keep backwards-compat aliases
-        pine: "#8B4D10",
-        brass: "#C9782C",
+
       },
       fontFamily: {
         display: ["'Lora'", "Georgia", "serif"],   // editorial headers

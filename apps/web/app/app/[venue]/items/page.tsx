@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Button, Card } from "@taproom/ui";
+import { Alert, Badge, Button, Card, DataTable, EmptyState, PageHeader } from "@taproom/ui";
 
-import { ItemTypeForm } from "@/components/item-type-form";
-import { createItemAction, deleteItemAction, updateItemAction } from "@/server/actions/items";
+import { Beer } from "lucide-react";
+
+import { AddItemForm } from "@/components/add-item-form";
+import { ItemActiveToggle } from "@/components/item-active-toggle";
+import { createItemAction, deleteItemAction, toggleItemActiveAction } from "@/server/actions/items";
 import { listVenueItems } from "@/server/repositories/items";
 import { requireVenueAccess } from "@/server/repositories/venues";
 
@@ -26,145 +29,96 @@ export default async function VenueItemsPage({
   const activeCount = items.filter((i) => i.active).length;
 
   const createAction = createItemAction.bind(null, venue);
-  const updateAction = updateItemAction.bind(null, venue);
   const deleteAction = deleteItemAction.bind(null, venue);
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Item Management
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            {venueRecord.menu_label} — {activeCount} active items
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Item Management" subtitle={`${venueRecord.menu_label} — ${activeCount} active items`} />
 
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
+      {message && <Alert variant="success" className="mb-5">{message}</Alert>}
+      {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
-      {/* Items list */}
       {items.length > 0 && (
-        <Card style={{ padding: 0, marginBottom: 20 }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-              <thead>
-                <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
-                  {["Item", "Type", "ABV / Category", "Status", "Actions"].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "left",
-                        fontWeight: 600,
-                        color: "var(--c-muted)",
-                        fontSize: 12,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderBottom: i < items.length - 1 ? "1px solid var(--c-border)" : "none",
-                      background: i % 2 !== 0 ? "oklch(98.5% 0.004 75)" : "transparent",
-                    }}
-                  >
-                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
-                      <div className="flex items-center gap-2.5">
-                        <span style={{ fontSize: 16 }}>{TYPE_EMOJI[item.type] ?? "•"}</span>
-                        <div>
-                          <div
-                            className="font-semibold"
-                            style={{ color: item.active ? "var(--c-text)" : "var(--c-muted)" }}
-                          >
-                            {item.name}
-                          </div>
-                          {item.description && (
-                            <div
-                              className="text-[11.5px] mt-px truncate max-w-[200px]"
-                              style={{ color: "var(--c-muted)" }}
-                            >
-                              {item.description}
-                            </div>
-                          )}
-                        </div>
+        <DataTable
+          rows={items}
+          keyExtractor={(item) => item.id}
+          striped
+          className="mb-5"
+          columns={[
+            {
+              key: "item",
+              label: "Item",
+              render: (item) => (
+                <div className="flex items-center gap-2.5">
+                  <span style={{ fontSize: 16 }}>{TYPE_EMOJI[item.type] ?? "•"}</span>
+                  <div>
+                    <div className="font-semibold" style={{ color: item.active ? "var(--c-text)" : "var(--c-muted)" }}>
+                      {item.name}
+                    </div>
+                    {item.description && (
+                      <div className="text-[11.5px] mt-px truncate max-w-[200px]" style={{ color: "var(--c-muted)" }}>
+                        {item.description}
                       </div>
-                    </td>
-                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
-                      <Badge variant="info">{TYPE_LABELS[item.type] ?? item.type}</Badge>
-                    </td>
-                    <td style={{ padding: "11px 12px", verticalAlign: "middle", color: "var(--c-muted)", fontSize: 13 }}>
-                      {[item.style_or_category, item.abv ? `${item.abv}% ABV` : null].filter(Boolean).join(" · ") || "—"}
-                    </td>
-                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
-                      <Badge variant={item.active ? "success" : "default"}>
-                        {item.active ? "Active" : "Hidden"}
-                      </Badge>
-                    </td>
-                    <td style={{ padding: "11px 12px", verticalAlign: "middle" }}>
-                      <div className="flex gap-1.5">
-                        <form action={updateAction}>
-                          <input name="item_id" type="hidden" value={item.id} />
-                          <input name="name" type="hidden" value={item.name} />
-                          <input name="type" type="hidden" value={item.type} />
-                          <input name="active" type="hidden" value={item.active ? "" : "on"} />
-                          <Button size="sm" type="submit" variant={item.active ? "secondary" : "success"}>
-                            {item.active ? "Hide" : "Show"}
-                          </Button>
-                        </form>
-                        <form action={deleteAction}>
-                          <input name="item_id" type="hidden" value={item.id} />
-                          <Button size="sm" type="submit" variant="ghost" style={{ color: "var(--c-muted)" }}>
-                            Del
-                          </Button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                    )}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: "type",
+              label: "Type",
+              render: (item) => <Badge variant="info">{TYPE_LABELS[item.type] ?? item.type}</Badge>,
+            },
+            {
+              key: "abv",
+              label: "ABV / Category",
+              render: (item) => (
+                <span style={{ color: "var(--c-muted)", fontSize: 13 }}>
+                  {[item.style_or_category, item.abv ? `${item.abv}% ABV` : null].filter(Boolean).join(" · ") || "—"}
+                </span>
+              ),
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (item) => (
+                <Badge variant={item.active ? "success" : "default"}>{item.active ? "Active" : "Hidden"}</Badge>
+              ),
+            },
+            {
+              key: "actions",
+              label: "Actions",
+              render: (item) => {
+                const toggleAction = toggleItemActiveAction.bind(null, venue, item.id);
+                return (
+                  <div className="flex items-center gap-2">
+                    <ItemActiveToggle active={item.active} action={toggleAction} />
+                    <form action={deleteAction}>
+                      <input name="item_id" type="hidden" value={item.id} />
+                      <Button size="sm" type="submit" variant="ghost" style={{ color: "var(--c-muted)" }}>
+                        Del
+                      </Button>
+                    </form>
+                  </div>
+                );
+              },
+            },
+          ]}
+        />
       )}
 
       {items.length === 0 && (
-        <Card style={{ marginBottom: 20 }}>
-          <div
-            className="flex flex-col items-center justify-center py-16 gap-3 text-center"
-          >
-            <div style={{ fontSize: 36 }}>🍺</div>
-            <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No items</div>
-            <div className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
-              Add your first tap, food item, or merch below.
-            </div>
-          </div>
-        </Card>
+        <EmptyState
+          icon={<Beer className="w-9 h-9 text-muted" />}
+          title="No items"
+          description="Add your first tap, food item, or merch below."
+          className="mb-5"
+        />
       )}
 
-      {/* Add item form */}
       <Card>
         <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Add item</div>
-        <ItemTypeForm action={createAction} />
+        <AddItemForm action={createAction} />
       </Card>
     </div>
   );

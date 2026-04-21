@@ -3,7 +3,9 @@ export const dynamic = "force-dynamic";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
+import { Calendar } from "lucide-react";
+
+import { Alert, Badge, Button, Card, EmptyState, Input, Label, PageHeader, Select, Textarea } from "@taproom/ui";
 
 import { DateTimeField } from "@/components/date-time-field";
 import { EventEditPanel } from "@/components/event-edit-panel";
@@ -41,49 +43,28 @@ export default async function VenueEventsPage({
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Event Management
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            {events.length} events · {publishedCount} published
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Event Management" subtitle={`${events.length} events · ${publishedCount} published`} />
 
       {!capability.canSellPaidEvents && (
-        <div className="mb-5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+        <Alert variant="warning" className="mb-5">
           <strong>Stripe not connected.</strong> Paid events and memberships are unavailable. Free RSVPs still work.{" "}
           <Link className="font-semibold underline" href={`/app/${venue}/billing` as Route}>
             Set up billing →
           </Link>
-        </div>
+        </Alert>
       )}
 
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
+      {message && <Alert variant="success" className="mb-5">{message}</Alert>}
+      {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
       {/* Events list */}
       {events.length === 0 ? (
-        <Card style={{ marginBottom: 20 }}>
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <div style={{ fontSize: 36 }}>🎟</div>
-            <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No events yet</div>
-            <div className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
-              Create your first RSVP or paid event below.
-            </div>
-          </div>
-        </Card>
+        <EmptyState
+          icon={<Calendar className="w-9 h-9 text-muted" />}
+          title="No events yet"
+          description="Create your first RSVP or paid event below."
+          className="mb-5"
+        />
       ) : (
         <div className="flex flex-col gap-3 mb-5">
           {events.map((event) => {

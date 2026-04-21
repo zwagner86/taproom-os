@@ -4,7 +4,9 @@ import { canResumeMembership } from "@taproom/domain";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Badge, Button, Card, Input, Label, Select, Textarea } from "@taproom/ui";
+import { Tag } from "lucide-react";
+
+import { Alert, Badge, Button, Card, DataTable, EmptyState, Input, Label, PageHeader, Select, Textarea } from "@taproom/ui";
 
 import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import {
@@ -40,36 +42,21 @@ export default async function VenueMembershipsPage({
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Memberships
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            {venueRecord.membership_label} · {plans.filter((p) => p.active).length} active plans · {memberships.length} members
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Memberships"
+        subtitle={`${venueRecord.membership_label} · ${plans.filter((p) => p.active).length} active plans · ${memberships.length} members`}
+      />
 
       {!capability.canSellMemberships && (
-        <div className="mb-5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+        <Alert variant="warning" className="mb-5">
           <strong>Stripe not connected.</strong> Memberships require payment setup.{" "}
           <Link className="font-semibold underline" href={`/app/${venue}/billing` as Route}>
             Set up billing →
           </Link>
-        </div>
+        </Alert>
       )}
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
+      {message && <Alert variant="success" className="mb-5">{message}</Alert>}
+      {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
       {/* Plans grid */}
       <div className="mb-6">
@@ -80,12 +67,7 @@ export default async function VenueMembershipsPage({
           Plans
         </div>
         {plans.length === 0 ? (
-          <Card>
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-              <div style={{ fontSize: 32 }}>🏷</div>
-              <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No plans yet</div>
-            </div>
-          </Card>
+          <EmptyState icon={<Tag className="w-9 h-9 text-muted" />} title="No plans yet" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {plans.map((plan) => (
@@ -204,84 +186,78 @@ export default async function VenueMembershipsPage({
             </p>
           </Card>
         ) : (
-          <Card style={{ padding: 0 }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-                <thead>
-                  <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
-                    {["Member", "Plan", "Status", "Period ends", "Actions"].map((h) => (
-                      <th
-                        key={h}
-                        style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--c-muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {memberships.map((membership, i) => {
-                    const cancelAction = cancelMembershipAction.bind(null, venue, membership.id);
-                    const resumeAction = resumeMembershipAction.bind(null, venue, membership.id);
-                    const resumable = canResumeMembership({
-                      cancelAtPeriodEnd: membership.cancel_at_period_end,
-                      endedAt: membership.ended_at,
-                      status: membership.status as "active" | "pending" | "past_due" | "cancelled",
-                    });
-
-                    return (
-                      <tr
-                        key={membership.id}
-                        style={{ borderBottom: i < memberships.length - 1 ? "1px solid var(--c-border)" : "none" }}
-                      >
-                        <td style={{ padding: "11px 12px" }}>
-                          <div className="font-semibold" style={{ color: "var(--c-text)" }}>
-                            {membership.member_name}
-                          </div>
-                          <div className="text-[11.5px]" style={{ color: "var(--c-muted)" }}>
-                            {membership.member_email}
-                          </div>
-                        </td>
-                        <td style={{ padding: "11px 12px" }}>
-                          <Badge variant="accent">
-                            {membership.plan_name_snapshot ?? membership.membership_plans?.name ?? "Membership"}
-                          </Badge>
-                        </td>
-                        <td style={{ padding: "11px 12px" }}>
-                          <div className="flex flex-col gap-1">
-                            <Badge variant={membership.status === "active" ? "success" : "default"}>
-                              {membership.status}
-                            </Badge>
-                            {membership.cancel_at_period_end && (
-                              <Badge variant="warning">
-                                Cancels {membership.current_period_end ? formatDate(membership.current_period_end) : "soon"}
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: "11px 12px", color: "var(--c-muted)", fontSize: 13 }}>
-                          {membership.current_period_end ? formatDate(membership.current_period_end) : "—"}
-                        </td>
-                        <td style={{ padding: "11px 12px" }}>
-                          {resumable ? (
-                            <form action={resumeAction}>
-                              <Button size="sm" type="submit" variant="success">Resume</Button>
-                            </form>
-                          ) : membership.status === "active" && !membership.cancel_at_period_end ? (
-                            <form action={cancelAction}>
-                              <Button size="sm" type="submit" variant="ghost" style={{ color: "oklch(45% 0.18 20)" }}>
-                                Cancel
-                              </Button>
-                            </form>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <DataTable
+            rows={memberships}
+            keyExtractor={(m) => m.id}
+            columns={[
+              {
+                key: "member",
+                label: "Member",
+                render: (m) => (
+                  <>
+                    <div className="font-semibold" style={{ color: "var(--c-text)" }}>{m.member_name}</div>
+                    <div className="text-[11.5px]" style={{ color: "var(--c-muted)" }}>{m.member_email}</div>
+                  </>
+                ),
+              },
+              {
+                key: "plan",
+                label: "Plan",
+                render: (m) => (
+                  <Badge variant="accent">
+                    {m.plan_name_snapshot ?? m.membership_plans?.name ?? "Membership"}
+                  </Badge>
+                ),
+              },
+              {
+                key: "status",
+                label: "Status",
+                render: (m) => (
+                  <div className="flex flex-col gap-1">
+                    <Badge variant={m.status === "active" ? "success" : "default"}>{m.status}</Badge>
+                    {m.cancel_at_period_end && (
+                      <Badge variant="warning">
+                        Cancels {m.current_period_end ? formatDate(m.current_period_end) : "soon"}
+                      </Badge>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: "period_ends",
+                label: "Period ends",
+                render: (m) => (
+                  <span style={{ color: "var(--c-muted)", fontSize: 13 }}>
+                    {m.current_period_end ? formatDate(m.current_period_end) : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "actions",
+                label: "Actions",
+                render: (m) => {
+                  const cancelAction = cancelMembershipAction.bind(null, venue, m.id);
+                  const resumeAction = resumeMembershipAction.bind(null, venue, m.id);
+                  const resumable = canResumeMembership({
+                    cancelAtPeriodEnd: m.cancel_at_period_end,
+                    endedAt: m.ended_at,
+                    status: m.status as "active" | "pending" | "past_due" | "cancelled",
+                  });
+                  return resumable ? (
+                    <form action={resumeAction}>
+                      <Button size="sm" type="submit" variant="success">Resume</Button>
+                    </form>
+                  ) : m.status === "active" && !m.cancel_at_period_end ? (
+                    <form action={cancelAction}>
+                      <Button size="sm" type="submit" variant="ghost" style={{ color: "oklch(45% 0.18 20)" }}>
+                        Cancel
+                      </Button>
+                    </form>
+                  ) : null;
+                },
+              },
+            ]}
+          />
         )}
       </div>
     </div>

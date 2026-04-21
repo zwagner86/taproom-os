@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { calculateApplicationFee } from "@taproom/domain";
-import { Badge, Button, Card } from "@taproom/ui";
+import { Alert, Badge, Button, Card, DataTable, PageHeader } from "@taproom/ui";
 
 import { getEnv } from "@/env";
 import {
@@ -46,27 +46,10 @@ export default async function VenueBillingPage({
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Billing & Payments
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            Stripe connection, ledger, and refunds.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Billing & Payments" subtitle="Stripe connection, ledger, and refunds." />
 
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
+      {message && <Alert variant="success" className="mb-5">{message}</Alert>}
+      {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
       <div className="grid grid-cols-[1fr_1.5fr] gap-6 items-start mb-6">
         {/* Left column */}
@@ -173,49 +156,53 @@ export default async function VenueBillingPage({
               </p>
             </Card>
           ) : (
-            <Card style={{ padding: 0 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-                <thead>
-                  <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
-                    {["Description", "Type", "Fee", "Amount", "Date"].map((h) => (
-                      <th
-                        key={h}
-                        style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--c-muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledger.map((entry, i) => (
-                    <tr key={entry.id} style={{ borderBottom: i < ledger.length - 1 ? "1px solid var(--c-border)" : "none" }}>
-                      <td style={{ padding: "11px 12px" }}>
-                        <div className="font-semibold text-[13px]" style={{ color: "var(--c-text)" }}>{entry.title}</div>
-                        <div className="text-[11.5px]" style={{ color: "var(--c-muted)" }}>{entry.status}</div>
-                      </td>
-                      <td style={{ padding: "11px 12px" }}>
-                        <Badge variant="info">{entry.type}</Badge>
-                      </td>
-                      <td style={{ padding: "11px 12px", fontSize: 13, color: "var(--c-muted)" }}>
-                        {formatCurrency(entry.feeCents, entry.currency)}
-                      </td>
-                      <td style={{ padding: "11px 12px" }}>
-                        <span
-                          className="font-semibold text-[13.5px]"
-                          style={{ color: entry.amountCents >= 0 ? "oklch(45% 0.15 155)" : "oklch(45% 0.18 20)" }}
-                        >
-                          {formatCurrency(entry.amountCents, entry.currency)}
-                        </span>
-                      </td>
-                      <td style={{ padding: "11px 12px", fontSize: 12, color: "var(--c-muted)" }}>
-                        {new Date(entry.occurredAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+            <DataTable
+              rows={ledger}
+              keyExtractor={(entry) => entry.id}
+              columns={[
+                {
+                  key: "description",
+                  label: "Description",
+                  render: (entry) => (
+                    <>
+                      <div className="font-semibold text-[13px]" style={{ color: "var(--c-text)" }}>{entry.title}</div>
+                      <div className="text-[11.5px]" style={{ color: "var(--c-muted)" }}>{entry.status}</div>
+                    </>
+                  ),
+                },
+                { key: "type", label: "Type", render: (entry) => <Badge variant="info">{entry.type}</Badge> },
+                {
+                  key: "fee",
+                  label: "Fee",
+                  render: (entry) => (
+                    <span style={{ fontSize: 13, color: "var(--c-muted)" }}>
+                      {formatCurrency(entry.feeCents, entry.currency)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "amount",
+                  label: "Amount",
+                  render: (entry) => (
+                    <span
+                      className="font-semibold text-[13.5px]"
+                      style={{ color: entry.amountCents >= 0 ? "oklch(45% 0.15 155)" : "oklch(45% 0.18 20)" }}
+                    >
+                      {formatCurrency(entry.amountCents, entry.currency)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "date",
+                  label: "Date",
+                  render: (entry) => (
+                    <span style={{ fontSize: 12, color: "var(--c-muted)" }}>
+                      {new Date(entry.occurredAt).toLocaleDateString()}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           )}
         </div>
       </div>
@@ -243,51 +230,53 @@ export default async function VenueBillingPage({
             </p>
           </Card>
         ) : (
-          <Card style={{ padding: 0 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-              <thead>
-                <tr style={{ borderBottom: "1.5px solid var(--c-border)" }}>
-                  {["Event", "Guest", "Amount", "Action"].map((h) => (
-                    <th
-                      key={h}
-                      style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--c-muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {refundableBookings.map((booking, i) => {
+          <DataTable
+            rows={refundableBookings}
+            keyExtractor={(booking) => booking.id}
+            columns={[
+              {
+                key: "event",
+                label: "Event",
+                render: (booking) => (
+                  <span style={{ fontWeight: 500, color: "var(--c-text)" }}>
+                    {booking.events?.title ?? "Paid event"}
+                  </span>
+                ),
+              },
+              {
+                key: "guest",
+                label: "Guest",
+                render: (booking) => (
+                  <span style={{ color: "var(--c-muted)", fontSize: 13 }}>{booking.purchaser_name}</span>
+                ),
+              },
+              {
+                key: "amount",
+                label: "Amount",
+                render: (booking) => (
+                  <span style={{ fontWeight: 600, color: "var(--c-text)" }}>
+                    {formatCurrency(booking.total_price_cents, booking.currency)}
+                  </span>
+                ),
+              },
+              {
+                key: "action",
+                label: "Action",
+                render: (booking) => {
                   const refundAction = refundEventBookingAction.bind(null, venue, booking.id);
-                  return (
-                    <tr key={booking.id} style={{ borderBottom: i < refundableBookings.length - 1 ? "1px solid var(--c-border)" : "none" }}>
-                      <td style={{ padding: "11px 12px", fontWeight: 500, color: "var(--c-text)" }}>
-                        {booking.events?.title ?? "Paid event"}
-                      </td>
-                      <td style={{ padding: "11px 12px", color: "var(--c-muted)", fontSize: 13 }}>
-                        {booking.purchaser_name}
-                      </td>
-                      <td style={{ padding: "11px 12px", fontWeight: 600, color: "var(--c-text)" }}>
-                        {formatCurrency(booking.total_price_cents, booking.currency)}
-                      </td>
-                      <td style={{ padding: "11px 12px" }}>
-                        {capability.canIssueRefunds ? (
-                          <form action={refundAction}>
-                            <Button size="sm" type="submit" variant="ghost" style={{ color: "oklch(45% 0.18 20)" }}>
-                              Full refund
-                            </Button>
-                          </form>
-                        ) : (
-                          <span className="text-[12px]" style={{ color: "var(--c-muted)" }}>Stripe required</span>
-                        )}
-                      </td>
-                    </tr>
+                  return capability.canIssueRefunds ? (
+                    <form action={refundAction}>
+                      <Button size="sm" type="submit" variant="ghost" style={{ color: "oklch(45% 0.18 20)" }}>
+                        Full refund
+                      </Button>
+                    </form>
+                  ) : (
+                    <span className="text-[12px]" style={{ color: "var(--c-muted)" }}>Stripe required</span>
                   );
-                })}
-              </tbody>
-            </table>
-          </Card>
+                },
+              },
+            ]}
+          />
         )}
       </div>
     </div>
