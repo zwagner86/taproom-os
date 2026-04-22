@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyDisplaySurfaceRules,
   buildAdHocDisplayPath,
-  buildPresetDisplayPath,
+  buildSavedDisplayPath,
   coerceDisplayPlaylistConfig,
+  coerceDisplayViewOptions,
+  getCanonicalPublicDisplayPath,
   getDefaultDisplayViewConfig,
   parseDisplayViewConfigFromSearchParams,
   serializeDisplayViewConfigToSearchParams,
@@ -44,33 +46,39 @@ describe("display helpers", () => {
     expect(embedded.linkTarget).toBe("new-tab");
   });
 
-  it("suppresses CTA behavior on tv surfaces", () => {
-    const tvConfig = applyDisplaySurfaceRules({
-      ...getDefaultDisplayViewConfig("public", "events"),
-      linkTarget: "new-tab",
-      showCtas: true,
-      surface: "tv",
-    });
+  it("coerces stored view options with surface rules", () => {
+    const options = coerceDisplayViewOptions(
+      {
+        linkTarget: "same-tab",
+        showFollowCard: true,
+        showMembershipForm: true,
+      },
+      {
+        content: "memberships",
+        surface: "embed",
+      },
+    );
 
-    expect(tvConfig.showCtas).toBe(false);
-    expect(tvConfig.linkTarget).toBe("same-tab");
+    expect(options.showFollowCard).toBe(false);
+    expect(options.showMembershipForm).toBe(false);
+    expect(options.linkTarget).toBe("new-tab");
   });
 
-  it("builds ad hoc and preset paths with the correct surface prefixes", () => {
+  it("builds ad hoc, saved, and canonical public paths", () => {
     const config = getDefaultDisplayViewConfig("embed", "menu");
 
     expect(buildAdHocDisplayPath("demo-taproom", config)).toContain("/embed/demo-taproom/display");
-    expect(buildPresetDisplayPath("demo-taproom", "main-board", "public")).toBe("/v/demo-taproom/display/main-board");
-    expect(buildPresetDisplayPath("demo-taproom", "main-board", "tv")).toBe("/tv/demo-taproom/display/main-board");
+    expect(buildSavedDisplayPath("demo-taproom", "main-board", "tv")).toBe("/tv/demo-taproom/display/main-board");
+    expect(getCanonicalPublicDisplayPath("demo-taproom", "drinks")).toBe("/v/demo-taproom/drinks");
   });
 
   it("coerces playlist slide defaults and validates bounds", () => {
     expect(
       coerceDisplayPlaylistConfig({
-        slides: [{ presetSlug: "drinks-board" }],
+        slides: [{ viewId: "view-1" }],
       }),
     ).toEqual({
-      slides: [{ durationSeconds: 12, presetSlug: "drinks-board", transition: "fade" }],
+      slides: [{ durationSeconds: 12, transition: "fade", viewId: "view-1" }],
     });
   });
 });

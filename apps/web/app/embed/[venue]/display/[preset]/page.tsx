@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { renderPresetDisplaySurfacePage } from "@/components/display-route-page";
+import { renderSavedDisplaySurfacePage } from "@/components/display-route-page";
 
 export default async function EmbedDisplayPresetPage({
   params,
@@ -11,8 +11,8 @@ export default async function EmbedDisplayPresetPage({
 }) {
   const [{ preset, venue }, resolvedSearchParams] = await Promise.all([params, searchParams]);
 
-  return renderPresetDisplaySurfacePage({
-    presetSlug: preset,
+  return renderSavedDisplaySurfacePage({
+    displaySlug: preset,
     searchParams: resolvedSearchParams,
     surface: "embed",
     venueSlug: venue,

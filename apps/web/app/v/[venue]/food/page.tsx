@@ -1,18 +1,21 @@
 export const dynamic = "force-dynamic";
 
+import { notFound } from "next/navigation";
+
 import { DisplayView } from "@/components/display-view";
-import { getDefaultDisplayViewConfig, parseDisplayViewConfigFromSearchParams } from "@/lib/displays";
+import { getCanonicalPublicDisplayViewConfig } from "@/server/repositories/display-views";
 
 export default async function PublicFoodPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ venue: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ venue }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const defaults = getDefaultDisplayViewConfig("public", "food");
-  const config = parseDisplayViewConfigFromSearchParams(resolvedSearchParams, defaults);
+  const { venue } = await params;
+  const resolved = await getCanonicalPublicDisplayViewConfig(venue, "food");
 
-  return <DisplayView config={{ ...config, content: "food", surface: "public" }} venueSlug={venue} />;
+  if (!resolved) {
+    notFound();
+  }
+
+  return <DisplayView config={resolved.config} venueSlug={venue} />;
 }

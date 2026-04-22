@@ -4,17 +4,15 @@ type SearchParamInput =
   | URLSearchParams
   | Record<string, string | string[] | undefined>;
 
-export const displayPresetKindSchema = z.enum(["view", "playlist"]);
 export const displayContentSchema = z.enum(["menu", "drinks", "food", "events", "memberships"]);
 export const displaySurfaceSchema = z.enum(["public", "embed", "tv"]);
+export const savedDisplaySurfaceSchema = z.enum(["embed", "tv"]);
 export const displayDensitySchema = z.enum(["comfortable", "compact"]);
 export const displayAspectSchema = z.enum(["auto", "landscape", "portrait"]);
 export const displayLinkTargetSchema = z.enum(["same-tab", "new-tab"]);
 export const displayTransitionSchema = z.literal("fade");
 
-export const displayViewConfigSchema = z.object({
-  content: displayContentSchema,
-  surface: displaySurfaceSchema,
+export const displayViewOptionsSchema = z.object({
   density: displayDensitySchema.default("comfortable"),
   aspect: displayAspectSchema.default("auto"),
   showVenueName: z.boolean().default(true),
@@ -30,8 +28,13 @@ export const displayViewConfigSchema = z.object({
   linkTarget: displayLinkTargetSchema.default("same-tab"),
 });
 
+export const displayViewConfigSchema = displayViewOptionsSchema.extend({
+  content: displayContentSchema,
+  surface: displaySurfaceSchema,
+});
+
 export const displayPlaylistSlideSchema = z.object({
-  presetSlug: z.string().trim().min(1),
+  viewId: z.string().trim().min(1),
   durationSeconds: z.coerce.number().int().min(3).max(120).default(12),
   transition: displayTransitionSchema.default("fade"),
 });
@@ -40,13 +43,14 @@ export const displayPlaylistConfigSchema = z.object({
   slides: z.array(displayPlaylistSlideSchema).max(12).default([]),
 });
 
-export type DisplayPresetKind = z.infer<typeof displayPresetKindSchema>;
 export type DisplayContent = z.infer<typeof displayContentSchema>;
 export type DisplaySurface = z.infer<typeof displaySurfaceSchema>;
+export type SavedDisplaySurface = z.infer<typeof savedDisplaySurfaceSchema>;
 export type DisplayDensity = z.infer<typeof displayDensitySchema>;
 export type DisplayAspect = z.infer<typeof displayAspectSchema>;
 export type DisplayLinkTarget = z.infer<typeof displayLinkTargetSchema>;
 export type DisplayTransition = z.infer<typeof displayTransitionSchema>;
+export type DisplayViewOptions = z.infer<typeof displayViewOptionsSchema>;
 export type DisplayViewConfig = z.infer<typeof displayViewConfigSchema>;
 export type DisplayPlaylistConfig = z.infer<typeof displayPlaylistConfigSchema>;
 export type DisplayPlaylistSlide = z.infer<typeof displayPlaylistSlideSchema>;
@@ -76,21 +80,33 @@ const BOOLEAN_QUERY_KEYS = {
   | "showVenueName"
 >, string>;
 
+export const DISPLAY_CONTENTS: DisplayContent[] = displayContentSchema.options;
+export const DISPLAY_SURFACES: DisplaySurface[] = displaySurfaceSchema.options;
+export const SAVED_DISPLAY_SURFACES: SavedDisplaySurface[] = savedDisplaySurfaceSchema.options;
+
 export const DISPLAY_CONTENT_LABELS: Record<DisplayContent, string> = {
   drinks: "Drinks",
   events: "Events",
   food: "Food",
   memberships: "Memberships",
-  menu: "Full menu",
+  menu: "Full Menu",
 };
 
 export const DISPLAY_SURFACE_LABELS: Record<DisplaySurface, string> = {
   embed: "Embed",
   public: "Public",
-  tv: "TV",
+  tv: "TV Display",
 };
 
-export function getDefaultDisplayViewConfig(surface: DisplaySurface, content: DisplayContent): DisplayViewConfig {
+const CANONICAL_PUBLIC_PATHS: Record<DisplayContent, string> = {
+  drinks: "drinks",
+  events: "events",
+  food: "food",
+  memberships: "memberships",
+  menu: "menu",
+};
+
+export function getDefaultDisplayViewOptions(surface: DisplaySurface, content: DisplayContent): DisplayViewOptions {
   const base: DisplayViewConfig = {
     aspect: surface === "tv" ? "landscape" : "auto",
     content,
@@ -130,11 +146,62 @@ export function getDefaultDisplayViewConfig(surface: DisplaySurface, content: Di
     base.showMembershipForm = false;
   }
 
-  return displayViewConfigSchema.parse(base);
+  return extractDisplayViewOptions(displayViewConfigSchema.parse(base));
+}
+
+export function getDefaultDisplayViewConfig(surface: DisplaySurface, content: DisplayContent): DisplayViewConfig {
+  return displayViewConfigSchema.parse({
+    ...getDefaultDisplayViewOptions(surface, content),
+    content,
+    surface,
+  });
+}
+
+export function extractDisplayViewOptions(config: DisplayViewConfig): DisplayViewOptions {
+  return displayViewOptionsSchema.parse({
+    aspect: config.aspect,
+    density: config.density,
+    linkTarget: config.linkTarget,
+    showAbv: config.showAbv,
+    showCtas: config.showCtas,
+    showDescriptions: config.showDescriptions,
+    showFollowCard: config.showFollowCard,
+    showLogo: config.showLogo,
+    showMembershipForm: config.showMembershipForm,
+    showPrices: config.showPrices,
+    showStyleMeta: config.showStyleMeta,
+    showTagline: config.showTagline,
+    showVenueName: config.showVenueName,
+  });
+}
+
+export function coerceDisplayViewOptions(
+  input: unknown,
+  context: { content: DisplayContent; surface: DisplaySurface },
+) {
+  return extractDisplayViewOptions(
+    applyDisplaySurfaceRules(
+      displayViewConfigSchema.parse({
+        ...displayViewOptionsSchema.parse(input),
+        content: context.content,
+        surface: context.surface,
+      }),
+    ),
+  );
 }
 
 export function coerceDisplayViewConfig(input: unknown) {
   return applyDisplaySurfaceRules(displayViewConfigSchema.parse(input));
+}
+
+export function hydrateDisplayViewConfig(options: DisplayViewOptions, content: DisplayContent, surface: DisplaySurface) {
+  return applyDisplaySurfaceRules(
+    displayViewConfigSchema.parse({
+      ...options,
+      content,
+      surface,
+    }),
+  );
 }
 
 export function coerceDisplayPlaylistConfig(input: unknown) {
@@ -231,11 +298,21 @@ export function serializeDisplayViewConfigToSearchParams(
 export function buildAdHocDisplayPath(venueSlug: string, config: DisplayViewConfig) {
   const params = serializeDisplayViewConfigToSearchParams(config);
   const query = params.toString();
-  return `/${config.surface === "public" ? "v" : config.surface}/${venueSlug}/display${query ? `?${query}` : ""}`;
+  return `/${getSurfacePathPrefix(config.surface)}/${venueSlug}/display${query ? `?${query}` : ""}`;
 }
 
-export function buildPresetDisplayPath(venueSlug: string, presetSlug: string, surface: DisplaySurface) {
-  return `/${surface === "public" ? "v" : surface}/${venueSlug}/display/${presetSlug}`;
+export function buildSavedDisplayPath(venueSlug: string, slug: string, surface: SavedDisplaySurface) {
+  return `/${getSurfacePathPrefix(surface)}/${venueSlug}/display/${slug}`;
+}
+
+export const buildPresetDisplayPath = buildSavedDisplayPath;
+
+export function getCanonicalPublicDisplayPath(venueSlug: string, content: DisplayContent) {
+  return `/v/${venueSlug}/${CANONICAL_PUBLIC_PATHS[content]}`;
+}
+
+export function getSurfacePathPrefix(surface: DisplaySurface) {
+  return surface === "public" ? "v" : surface;
 }
 
 function appendParam(
@@ -274,28 +351,31 @@ function parseBooleanValue(value: string | undefined) {
     return undefined;
   }
 
-  if (["1", "true", "yes", "on"].includes(value)) {
+  if (value === "1") {
     return true;
   }
 
-  if (["0", "false", "no", "off"].includes(value)) {
+  if (value === "0") {
     return false;
   }
 
   return undefined;
 }
 
-function parseEnumValue<T extends string>(schema: z.ZodType<T>, value: string | undefined) {
+function parseEnumValue<T extends string>(
+  schema: z.ZodType<T>,
+  value: string | undefined,
+): T | undefined {
   if (!value) {
     return undefined;
   }
 
-  const result = schema.safeParse(value);
-  return result.success ? result.data : undefined;
+  const parsed = schema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }
 
-function removeUndefinedEntries<T extends object>(value: T) {
+function removeUndefinedEntries<T extends Record<string, unknown>>(input: T) {
   return Object.fromEntries(
-    Object.entries(value).filter(([, entry]) => entry !== undefined),
+    Object.entries(input).filter(([, value]) => value !== undefined),
   ) as Partial<T>;
 }

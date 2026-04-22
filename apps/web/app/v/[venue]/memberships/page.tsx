@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
+import { notFound } from "next/navigation";
+
 import { DisplayView } from "@/components/display-view";
-import { getDefaultDisplayViewConfig, parseDisplayViewConfigFromSearchParams } from "@/lib/displays";
+import { getCanonicalPublicDisplayViewConfig } from "@/server/repositories/display-views";
 
 export default async function PublicMembershipsPage({
   params,
@@ -11,8 +13,12 @@ export default async function PublicMembershipsPage({
   searchParams: Promise<{ checkout?: string; error?: string; message?: string }>;
 }) {
   const [{ venue }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const defaults = getDefaultDisplayViewConfig("public", "memberships");
-  const config = parseDisplayViewConfigFromSearchParams(resolvedSearchParams, defaults);
+  const resolved = await getCanonicalPublicDisplayViewConfig(venue, "memberships");
+
+  if (!resolved) {
+    notFound();
+  }
+
   const alerts = (
     <>
       {resolvedSearchParams.checkout === "success" && (
@@ -45,7 +51,7 @@ export default async function PublicMembershipsPage({
           ? alerts
           : null
       }
-      config={{ ...config, content: "memberships", surface: "public" }}
+      config={resolved.config}
       venueSlug={venue}
     />
   );

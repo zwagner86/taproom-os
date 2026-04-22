@@ -2,14 +2,15 @@ import { Card } from "@taproom/ui";
 import { notFound } from "next/navigation";
 
 import {
-  applyDisplaySurfaceRules,
-  buildPresetDisplayPath,
+  buildSavedDisplayPath,
   getDefaultDisplayViewConfig,
   getDisplayContentFromSearchParams,
   type DisplaySurface,
+  type SavedDisplaySurface,
   parseDisplayViewConfigFromSearchParams,
 } from "@/lib/displays";
-import { getPublicDisplayPreset, listVenueDisplayPresets } from "@/server/repositories/display-presets";
+import { getVenueDisplayPlaylistBySurfaceAndSlug } from "@/server/repositories/display-playlists";
+import { getVenueDisplayViewBySurfaceAndSlug, listVenueDisplayViews } from "@/server/repositories/display-views";
 import { getVenueBySlug } from "@/server/repositories/venues";
 
 import { DisplayPlaylistPlayer } from "./display-playlist-player";
@@ -39,36 +40,51 @@ export async function renderAdHocDisplaySurfacePage({
   return <DisplayView config={{ ...config, surface }} venueSlug={venueSlug} />;
 }
 
-export async function renderPresetDisplaySurfacePage({
-  presetSlug,
+export async function renderSavedDisplaySurfacePage({
+  displaySlug,
   searchParams,
   surface,
   venueSlug,
 }: {
-  presetSlug: string;
+  displaySlug: string;
   searchParams: SearchParams;
-  surface: DisplaySurface;
+  surface: SavedDisplaySurface;
   venueSlug: string;
 }) {
-  const { preset, venue } = await getPublicDisplayPreset(venueSlug, presetSlug);
+  const venue = await getVenueBySlug(venueSlug);
 
-  if (!venue || !preset) {
+  if (!venue) {
     notFound();
   }
 
-  if (preset.kind === "playlist") {
-    const presets = await listVenueDisplayPresets(venue.id);
-    const viewPresetSlugs = new Set(
-      presets.filter((entry) => entry.kind === "view").map((entry) => entry.slug),
+  const [playlist, view] = await Promise.all([
+    getVenueDisplayPlaylistBySurfaceAndSlug(venue.id, surface, displaySlug),
+    getVenueDisplayViewBySurfaceAndSlug(venue.id, surface, displaySlug),
+  ]);
+
+  if (playlist) {
+    const views = await listVenueDisplayViews(venue.id);
+    const viewById = new Map(
+      views
+        .filter((entry) => entry.surface === surface && entry.slug)
+        .map((entry) => [entry.id, entry]),
     );
 
-    const slides = preset.config.slides
-      .filter((slide) => viewPresetSlugs.has(slide.presetSlug))
-      .map((slide) => ({
-        durationSeconds: slide.durationSeconds,
-        src: buildPresetDisplayPath(venueSlug, slide.presetSlug, surface),
-        title: `${venue.name} ${slide.presetSlug}`,
-      }));
+    const slides = playlist.config.slides
+      .map((slide) => {
+        const referencedView = viewById.get(slide.viewId);
+
+        if (!referencedView?.slug) {
+          return null;
+        }
+
+        return {
+          durationSeconds: slide.durationSeconds,
+          src: buildSavedDisplayPath(venueSlug, referencedView.slug, surface),
+          title: `${venue.name} ${referencedView.name ?? referencedView.content}`,
+        };
+      })
+      .filter((slide): slide is NonNullable<typeof slide> => Boolean(slide));
 
     return (
       <main className={surface === "tv" ? "min-h-screen bg-black px-6 py-6" : "min-h-screen px-4 py-4"}>
@@ -79,11 +95,11 @@ export async function renderPresetDisplaySurfacePage({
     );
   }
 
-  const baseConfig = applyDisplaySurfaceRules({
-    ...preset.config,
-    surface,
-  });
-  const config = parseDisplayViewConfigFromSearchParams(searchParams, baseConfig);
+  if (!view) {
+    notFound();
+  }
+
+  const config = parseDisplayViewConfigFromSearchParams(searchParams, view.config);
 
   return <DisplayView config={{ ...config, surface }} venueSlug={venueSlug} />;
 }

@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
+import { notFound } from "next/navigation";
+
 import { DisplayView } from "@/components/display-view";
-import { getDefaultDisplayViewConfig, parseDisplayViewConfigFromSearchParams } from "@/lib/displays";
+import { getCanonicalPublicDisplayViewConfig } from "@/server/repositories/display-views";
 
 export default async function PublicEventsPage({
   params,
@@ -11,8 +13,12 @@ export default async function PublicEventsPage({
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const [{ venue }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const defaults = getDefaultDisplayViewConfig("public", "events");
-  const config = parseDisplayViewConfigFromSearchParams(resolvedSearchParams, defaults);
+  const resolved = await getCanonicalPublicDisplayViewConfig(venue, "events");
+
+  if (!resolved) {
+    notFound();
+  }
+
   const alerts = (
     <>
       {resolvedSearchParams.message && (
@@ -31,7 +37,7 @@ export default async function PublicEventsPage({
   return (
     <DisplayView
       alerts={resolvedSearchParams.error || resolvedSearchParams.message ? alerts : null}
-      config={{ ...config, content: "events", surface: "public" }}
+      config={resolved.config}
       venueSlug={venue}
     />
   );

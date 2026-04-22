@@ -32,37 +32,69 @@ export type Database = {
           venue_id?: string;
         };
       };
-      display_presets: {
+      display_playlists: {
         Row: {
           config: Json;
           created_at: string;
-          default_surface: string;
           id: string;
-          kind: string;
           name: string;
           slug: string;
+          surface: string;
           updated_at: string;
           venue_id: string;
         };
         Insert: {
           config?: Json;
           created_at?: string;
-          default_surface?: string;
           id?: string;
-          kind?: string;
           name: string;
           slug: string;
+          surface: string;
           updated_at?: string;
           venue_id: string;
         };
         Update: {
           config?: Json;
           created_at?: string;
-          default_surface?: string;
           id?: string;
-          kind?: string;
           name?: string;
           slug?: string;
+          surface?: string;
+          updated_at?: string;
+          venue_id?: string;
+        };
+      };
+      display_views: {
+        Row: {
+          config: Json;
+          content: string;
+          created_at: string;
+          id: string;
+          name: string | null;
+          slug: string | null;
+          surface: string;
+          updated_at: string;
+          venue_id: string;
+        };
+        Insert: {
+          config?: Json;
+          content: string;
+          created_at?: string;
+          id?: string;
+          name?: string | null;
+          slug?: string | null;
+          surface: string;
+          updated_at?: string;
+          venue_id: string;
+        };
+        Update: {
+          config?: Json;
+          content?: string;
+          created_at?: string;
+          id?: string;
+          name?: string | null;
+          slug?: string | null;
+          surface?: string;
           updated_at?: string;
           venue_id?: string;
         };
