@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 
-import { Alert } from "@taproom/ui";
+import { Alert } from "@/components/ui";
 
 import { ItemTypeForm } from "@/components/item-type-form";
 import type { ItemFormState } from "@/server/actions/items";

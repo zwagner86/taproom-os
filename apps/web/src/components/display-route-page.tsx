@@ -1,4 +1,4 @@
-import { Card } from "@taproom/ui";
+import { Card } from "@/components/ui";
 import { notFound } from "next/navigation";
 
 import {
@@ -106,8 +106,8 @@ export async function renderSavedDisplaySurfacePage({
 
 export function DisplayPresetNotReadyCard({ message }: { message: string }) {
   return (
-    <Card>
-      <div className="py-10 text-center text-[13.5px]" style={{ color: "var(--c-muted)" }}>
+    <Card className="border-border/80 bg-white/92 text-center shadow-[0_18px_48px_rgba(80,54,31,0.06)]">
+      <div className="py-8 text-sm leading-7 text-muted-foreground">
         {message}
       </div>
     </Card>

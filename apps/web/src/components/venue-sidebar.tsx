@@ -5,7 +5,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Badge, Card } from "@taproom/ui";
+import { Badge, Card } from "@/components/ui";
 
 import type { VenueRow } from "@/server/repositories/venues";
 
@@ -22,19 +22,19 @@ const sections = [
 
 export function VenueSidebar({ venue }: { venue: VenueRow }) {
   return (
-    <Card className="sticky top-4 space-y-5">
+    <Card className="sticky top-4 space-y-5 border-border/80 bg-white/88 shadow-[0_18px_48px_rgba(80,54,31,0.08)]">
       <div className="space-y-2">
-        <Badge>{venue.venue_type}</Badge>
+        <Badge variant="accent">{venue.venue_type}</Badge>
         <div>
-          <p className="font-display text-2xl text-ink">{venue.name}</p>
-          <p className="text-sm text-ink/55">{venue.slug}</p>
+          <p className="font-display text-2xl text-foreground">{venue.name}</p>
+          <p className="text-sm text-muted-foreground">{venue.slug}</p>
         </div>
       </div>
 
       <nav className="grid gap-2">
         {sections.map((section) => (
           <Link
-            className="rounded-2xl border border-transparent bg-mist/40 px-4 py-3 text-sm font-semibold text-ink/70 transition hover:border-ink/10 hover:bg-white hover:text-ink"
+            className="rounded-2xl border border-transparent bg-secondary/55 px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:border-border hover:bg-white hover:text-foreground"
             href={`/app/${venue.slug}/${section.href}` as Route}
             key={section.href}
           >
@@ -43,7 +43,7 @@ export function VenueSidebar({ venue }: { venue: VenueRow }) {
         ))}
       </nav>
 
-      <div className="rounded-3xl bg-mist p-4 text-sm leading-6 text-ink/65">
+      <div className="rounded-3xl bg-secondary/65 p-4 text-sm leading-7 text-muted-foreground">
         Operator-assisted onboarding is the default in MVP. Self-serve venue creation is available, but internal setup remains the fastest path.
       </div>
     </Card>

@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { PageHeader } from "@taproom/ui";
+import { PageHeader } from "@/components/ui";
 
 import { VenueSettingsForm } from "@/components/venue-settings-form";
 import { updateVenueSettingsAction } from "@/server/actions/venues";

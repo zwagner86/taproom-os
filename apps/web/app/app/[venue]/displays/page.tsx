@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Alert } from "@taproom/ui";
+import { Alert, PageHeader } from "@/components/ui";
 
 import { DisplaysWorkspace } from "@/components/displays-workspace";
 import {
@@ -39,14 +39,10 @@ export default async function VenueDisplaysPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[28px] font-bold tracking-[-0.03em]" style={{ color: "var(--c-text)" }}>
-          Displays
-        </h1>
-        <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-          Organize public views, saved TV/embed displays, and playlists for {venueRecord.name}.
-        </p>
-      </div>
+      <PageHeader
+        subtitle={`Organize public views, saved TV/embed displays, and playlists for ${venueRecord.name}.`}
+        title="Displays"
+      />
 
       {resolvedSearchParams.message && <Alert variant="success">{resolvedSearchParams.message}</Alert>}
       {resolvedSearchParams.error && <Alert variant="error">{resolvedSearchParams.error}</Alert>}

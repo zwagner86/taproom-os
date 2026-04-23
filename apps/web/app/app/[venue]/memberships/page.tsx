@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { Tag } from "lucide-react";
 
-import { Alert, Badge, Button, Card, DataTable, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@taproom/ui";
+import { Alert, Badge, Button, Card, DataTable, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@/components/ui";
 
 import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import {
@@ -112,7 +112,7 @@ export default async function VenueMembershipsPage({
                         This name appears on internal plan lists, Stripe-backed memberships, and your public signup page.
                       </FieldHint>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 md:grid-cols-2">
                       <div className="flex flex-col gap-1">
                         <FieldLabel
                           htmlFor={`plan-price-${plan.id}`}
@@ -214,7 +214,7 @@ export default async function VenueMembershipsPage({
               Describe the perks, pours, discounts, or pickups members receive each billing cycle.
             </FieldHint>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="flex flex-col gap-1">
               <FieldLabel
                 htmlFor="create-plan-price"

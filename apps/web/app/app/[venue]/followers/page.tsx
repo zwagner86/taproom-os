@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Card } from "@taproom/ui";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
 import { listVenueFollowers } from "@/server/repositories/followers";
 import { requireVenueAccess } from "@/server/repositories/venues";
@@ -18,20 +18,11 @@ export default async function VenueFollowersPage({ params }: { params: Promise<{
   ).length;
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Followers
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            Opted-in fans who want to hear from you.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader subtitle="Opted-in fans who want to hear from you." title="Followers" />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="mb-5 grid gap-3 md:grid-cols-3">
         {[
           { label: "Total followers", value: activeFollowers.length, icon: "👥" },
           { label: "Email opt-in", value: emailCount, icon: "✉️" },
@@ -49,15 +40,11 @@ export default async function VenueFollowersPage({ params }: { params: Promise<{
 
       {/* Table */}
       {followers.length === 0 ? (
-        <Card>
-          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-            <div style={{ fontSize: 32 }}>📭</div>
-            <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>No followers yet</div>
-            <div className="text-[13.5px] max-w-xs leading-relaxed" style={{ color: "var(--c-muted)" }}>
-              Public menu, event, and membership pages include follow capture.
-            </div>
-          </div>
-        </Card>
+        <EmptyState
+          description="Public menu, event, and membership pages include follow capture."
+          icon={<span className="text-3xl">📭</span>}
+          title="No followers yet"
+        />
       ) : (
         <Card style={{ padding: 0 }}>
           <div style={{ overflowX: "auto" }}>

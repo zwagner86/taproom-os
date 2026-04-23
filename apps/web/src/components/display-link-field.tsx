@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button, Input, Textarea } from "@taproom/ui";
+import { Button, Input, Textarea } from "@/components/ui";
 
 export function DisplayLinkField({
   copyLabel,

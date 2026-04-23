@@ -1,5 +1,6 @@
 import { formatAbv, resolveDisplayedPrice } from "@taproom/domain";
-import { Badge } from "@taproom/ui";
+
+import { Badge, Card } from "@/components/ui";
 
 import type { Database } from "../../../../supabase/types";
 
@@ -22,34 +23,31 @@ const GROUP_LABELS: Record<ItemType, string> = {
 export function PublicItemList({ items, emptyMessage }: { items: ItemRecord[]; emptyMessage?: string }) {
   if (items.length === 0) {
     return (
-      <div
-        className="rounded-xl border px-5 py-10 text-center"
-        style={{ borderColor: "var(--c-border)" }}
-      >
-        <div className="text-[32px] mb-2">🍺</div>
-        <p className="text-[14px]" style={{ color: "var(--c-muted)" }}>{emptyMessage ?? "Nothing on tap right now — check back soon."}</p>
-      </div>
+      <Card className="border-dashed text-center shadow-none">
+        <div className="mb-2 text-[32px]">🍺</div>
+        <p className="text-sm leading-7 text-muted-foreground">
+          {emptyMessage ?? "Nothing on tap right now — check back soon."}
+        </p>
+      </Card>
     );
   }
 
   const groups = GROUP_ORDER
-    .map((type) => ({ items: items.filter((i) => i.type === type), type }))
-    .filter((g) => g.items.length > 0);
+    .map((type) => ({ items: items.filter((item) => item.type === type), type }))
+    .filter((group) => group.items.length > 0);
 
   return (
-    <div className="flex flex-col">
-      {groups.map((group, gi) => (
-        <div className={gi > 0 ? "mt-4" : ""} key={group.type}>
-          {/* Section header */}
-          <div
-            className="text-[11px] font-bold uppercase tracking-[0.9px] py-2 border-b"
-            style={{ color: "var(--c-muted)", borderColor: "var(--c-border)" }}
-          >
-            {GROUP_LABELS[group.type]}
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <Card className="overflow-hidden border-border/80 bg-white/92" key={group.type} style={{ padding: 0 }}>
+          <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5">
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              {GROUP_LABELS[group.type]}
+            </div>
+            <Badge variant="default">{group.items.length}</Badge>
           </div>
 
-          {/* Items */}
-          <div className="flex flex-col divide-y" style={{ borderColor: "var(--c-border)" }}>
+          <div className="divide-y divide-border/70 px-5">
             {group.items.map((item) => {
               const linkedPrice = item.item_external_links[0];
               const price = resolveDisplayedPrice(
@@ -63,36 +61,25 @@ export function PublicItemList({ items, emptyMessage }: { items: ItemRecord[]; e
               );
 
               return (
-                <div
-                  key={item.id}
-                  className="flex items-start justify-between gap-4 py-4"
-                >
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="mt-0.5 text-[20px] flex-shrink-0">{TYPE_EMOJI[item.type] ?? "•"}</div>
-                    <div>
-                      <div className="font-semibold text-[15px]" style={{ color: "var(--c-text)" }}>
-                        {item.name}
-                      </div>
-                      <div className="text-[13px] mt-0.5" style={{ color: "var(--c-muted)" }}>
+                <div className="flex items-start justify-between gap-4 py-4" key={item.id}>
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="mt-0.5 text-[20px]">{TYPE_EMOJI[item.type] ?? "•"}</div>
+                    <div className="min-w-0">
+                      <div className="text-base font-semibold text-foreground">{item.name}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">
                         {[item.style_or_category, formatAbv(item.abv)].filter(Boolean).join(" · ") || "Rotating feature"}
                       </div>
                       {item.description && (
-                        <div className="text-[13px] mt-1.5 leading-relaxed" style={{ color: "var(--c-muted)" }}>
-                          {item.description}
-                        </div>
+                        <div className="mt-2 text-sm leading-7 text-muted-foreground">{item.description}</div>
                       )}
                     </div>
                   </div>
-                  {price && (
-                    <div className="flex-shrink-0 font-semibold text-[14px]" style={{ color: "var(--c-text)" }}>
-                      {price}
-                    </div>
-                  )}
+                  {price && <div className="shrink-0 text-sm font-semibold text-foreground">{price}</div>}
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

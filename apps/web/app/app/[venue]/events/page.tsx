@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { Calendar } from "lucide-react";
 
-import { Alert, Badge, Button, Card, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@taproom/ui";
+import { Alert, Badge, Button, Card, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@/components/ui";
 
 import { DateTimeField } from "@/components/date-time-field";
 import { EventEditPanel } from "@/components/event-edit-panel";
@@ -167,7 +167,7 @@ export default async function VenueEventsPage({
               This title appears on the public event page, check-in screen, and admin event list.
             </FieldHint>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 lg:grid-cols-3">
             <div className="flex flex-col gap-1">
               <FieldLabel
                 htmlFor="create-capacity"
@@ -215,7 +215,7 @@ export default async function VenueEventsPage({
               </FieldHint>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <DateTimeField
               hint="Set the local start date and time that should appear on tickets, listings, and check-in tools."
               info="Use your venue's local time. This field is required for every event."

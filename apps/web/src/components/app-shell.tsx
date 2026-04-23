@@ -1,9 +1,22 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import {
+  ChevronDown,
+  ExternalLink,
+  LayoutDashboard,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Store,
+  X,
+} from "lucide-react";
+
+import { Badge, Button, cn } from "@/components/ui";
 
 type NavItem = { href: string; label: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
@@ -23,7 +36,7 @@ export function AppShell({
   children,
   venueName,
   venueSlug,
-  venueType: _venueType,
+  venueType,
   userInitials,
   userLabel,
   groups,
@@ -31,174 +44,271 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>(
-    Object.fromEntries(groups.map((g) => [g.id, true])),
+    Object.fromEntries(groups.map((group) => [group.id, true])),
   );
 
-  const toggleGroup = (id: string) =>
-    setExpanded((p) => ({ ...p, [id]: !p[id] }));
+  const screenLabel = useMemo(
+    () =>
+      currentScreenLabel ??
+      groups
+        .flatMap((group) => group.items)
+        .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label ??
+      venueName,
+    [currentScreenLabel, groups, pathname, venueName],
+  );
 
-  const screenLabel =
-    currentScreenLabel ??
-    groups.flatMap((g) => g.items).find((i) => pathname.endsWith(i.href) || pathname.includes(i.href + "/"))?.label ??
-    venueName;
+  function toggleGroup(id: string) {
+    setExpanded((current) => ({ ...current, [id]: !current[id] }));
+  }
+
+  function handleNavigate() {
+    setMobileOpen(false);
+  }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-parchment">
-      {/* Sidebar */}
-      <aside
-        className="flex flex-shrink-0 flex-col overflow-hidden transition-[width] duration-200 bg-sidebar h-screen sticky top-0"
-        style={{ width: collapsed ? 52 : 220 }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center border-b border-white/[0.07] shrink-0"
-          style={{
-            padding: collapsed ? "18px 0" : "18px 16px",
-            justifyContent: collapsed ? "center" : "space-between",
-          }}
-        >
-          {!collapsed ? (
-            <>
-              <div className="flex items-center gap-2">
-                <div
-                  className="flex items-center justify-center rounded-lg text-white font-black text-sm flex-shrink-0 w-7 h-7"
-                  style={{ background: "var(--accent)" }}
-                >
-                  T
-                </div>
-                <div>
-                  <div className="text-white text-[13px] font-bold leading-tight">TaproomOS</div>
-                  <div className="text-[10.5px] mt-px text-white/40">{venueName}</div>
-                </div>
-              </div>
-              <button
-                className="border-none bg-transparent cursor-pointer text-lg leading-none p-0 text-white/[0.35]"
-                onClick={() => setCollapsed(true)}
-                type="button"
-              >
-                ‹
-              </button>
-            </>
-          ) : (
-            <div
-              className="flex items-center justify-center rounded-lg text-white font-black text-sm w-7 h-7"
-              style={{ background: "var(--accent)" }}
-            >
-              T
-            </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(201,107,44,0.08),transparent_28%),linear-gradient(180deg,#f8f4ee_0%,#fbfaf8_45%,#f5f1ea_100%)]">
+      <div className="flex min-h-screen">
+        <aside
+          className={cn(
+            "hidden border-r border-border/80 bg-sidebar text-white lg:flex lg:flex-col",
+            collapsed ? "lg:w-[104px]" : "lg:w-[312px]",
           )}
-        </div>
+        >
+          <ShellNav
+            collapsed={collapsed}
+            expanded={expanded}
+            groups={groups}
+            onNavigate={handleNavigate}
+            onToggleGroup={toggleGroup}
+            pathname={pathname}
+            userInitials={userInitials}
+            userLabel={userLabel}
+            venueName={venueName}
+            venueSlug={venueSlug}
+            venueType={venueType}
+          />
+        </aside>
 
-        {collapsed && (
-          <button
-            className="border-none bg-transparent cursor-pointer text-lg leading-none text-center py-2.5 text-white/[0.35]"
-            onClick={() => setCollapsed(false)}
-            type="button"
-          >
-            ›
-          </button>
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <button
+              aria-label="Close navigation"
+              className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]"
+              onClick={() => setMobileOpen(false)}
+              type="button"
+            />
+            <aside className="relative z-10 flex h-full w-[min(88vw,22rem)] flex-col border-r border-border/80 bg-sidebar text-white shadow-2xl">
+              <ShellNav
+                collapsed={false}
+                expanded={expanded}
+                groups={groups}
+                onNavigate={handleNavigate}
+                onToggleGroup={toggleGroup}
+                pathname={pathname}
+                userInitials={userInitials}
+                userLabel={userLabel}
+                venueName={venueName}
+                venueSlug={venueSlug}
+                venueType={venueType}
+              />
+            </aside>
+          </div>
         )}
 
-        {/* Nav */}
-        <nav
-          className="flex-1 py-2 overflow-y-auto"
-          style={{ overflowX: "hidden", scrollbarWidth: "none" } as React.CSSProperties}
-        >
-          {groups.map((group) => (
-            <div className="mb-1" key={group.id}>
-              {!collapsed && (
-                <button
-                  className="w-full flex items-center justify-between border-none bg-transparent cursor-pointer font-[inherit] uppercase tracking-[1px] px-4 pt-2 pb-1 text-[10px] font-bold text-white/[0.35]"
-                  onClick={() => toggleGroup(group.id)}
-                  type="button"
-                >
-                  {group.label}
-                  <span className="text-[10px]">{expanded[group.id] ? "▾" : "▸"}</span>
-                </button>
-              )}
-              {(collapsed || expanded[group.id]) &&
-                group.items.map((item) => {
-                  const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-                  return (
-                    <Link
-                      className="flex items-center gap-2 no-underline transition-all duration-100"
-                      href={item.href as `/${string}`}
-                      key={item.href}
-                      style={{
-                        background: active ? "rgba(255,255,255,0.1)" : "transparent",
-                        padding: collapsed ? "9px 0" : "8px 16px",
-                        justifyContent: collapsed ? "center" : "flex-start",
-                        borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
-                      }}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <span
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ background: active ? "var(--accent)" : "rgba(255,255,255,0.25)" }}
-                      />
-                      {!collapsed && (
-                        <span
-                          className="text-[13px] leading-[1.3]"
-                          style={{
-                            color: active ? "#fff" : "rgba(255,255,255,0.6)",
-                            fontWeight: active ? 500 : 400,
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-            </div>
-          ))}
-        </nav>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 border-b border-border/80 bg-background/92 backdrop-blur">
+            <div className="flex items-center gap-3 px-4 py-3 md:px-6 lg:px-8">
+              <Button
+                aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+                className="lg:hidden"
+                onClick={() => setMobileOpen((current) => !current)}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
+                {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              </Button>
+              <Button
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className="hidden lg:inline-flex"
+                onClick={() => setCollapsed((current) => !current)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              </Button>
 
-        {/* User footer */}
-        {!collapsed && (
-          <div className="shrink-0 border-t border-white/[0.07] px-4 py-3">
-            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  Venue Admin
+                </div>
+                <div className="truncate text-lg font-semibold text-foreground">{screenLabel}</div>
+              </div>
+
+              <Badge className="hidden sm:inline-flex capitalize" variant="accent">
+                {venueType}
+              </Badge>
+              <div className="hidden rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground md:block">
+                {venueSlug}.taproomos.com
+              </div>
               <div
-                className="flex items-center justify-center rounded-full text-white text-xs font-bold flex-shrink-0 w-7 h-7"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
                 style={{ background: "var(--accent)" }}
               >
                 {userInitials}
               </div>
-              <div>
-                <div className="text-xs font-medium text-white/75">{userLabel}</div>
-                <div className="text-[10.5px] text-white/[0.35]">Venue Admin</div>
+            </div>
+          </header>
+
+          <main className="flex-1 px-4 py-6 md:px-6 lg:px-8 lg:py-8">{children}</main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShellNav({
+  collapsed,
+  expanded,
+  groups,
+  onNavigate,
+  onToggleGroup,
+  pathname,
+  userInitials,
+  userLabel,
+  venueName,
+  venueSlug,
+  venueType,
+}: {
+  collapsed: boolean;
+  expanded: Record<string, boolean>;
+  groups: NavGroup[];
+  onNavigate: () => void;
+  onToggleGroup: (id: string) => void;
+  pathname: string;
+  userInitials: string;
+  userLabel: string;
+  venueName: string;
+  venueSlug: string;
+  venueType: string;
+}) {
+  return (
+    <>
+      <div className="border-b border-white/10 px-4 py-4">
+        <div className={cn("flex items-start gap-3", collapsed && "justify-center")}>
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-black text-white shadow-lg"
+            style={{ background: "linear-gradient(135deg, var(--accent), rgba(255,255,255,0.12))" }}
+          >
+            T
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-semibold text-white">TaproomOS</span>
+                <Badge className="border-white/10 bg-white/10 capitalize text-white" variant="default">
+                  {venueType}
+                </Badge>
+              </div>
+              <div className="mt-1 truncate text-base font-medium text-white/90">{venueName}</div>
+              <div className="mt-2 flex items-center gap-2 text-xs text-white/55">
+                <Store className="h-3.5 w-3.5" />
+                <span className="truncate">{venueSlug}.taproomos.com</span>
               </div>
             </div>
-          </div>
-        )}
-      </aside>
+          )}
+        </div>
+      </div>
 
-      {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar */}
-        <div className="flex items-center flex-shrink-0 border-b border-rim bg-white gap-3 h-[52px] px-6">
-          <div className="flex-1">
-            <span className="text-[13.5px] font-semibold text-ink">{screenLabel}</span>
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {groups.map((group) => (
+          <div className="mb-4" key={group.id}>
+            {!collapsed && (
+              <button
+                className="mb-2 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45 transition-colors hover:bg-white/5 hover:text-white/70"
+                onClick={() => onToggleGroup(group.id)}
+                type="button"
+              >
+                <span>{group.label}</span>
+                <ChevronDown
+                  className={cn("h-4 w-4 transition-transform", !expanded[group.id] && "-rotate-90")}
+                />
+              </button>
+            )}
+
+            {(collapsed || expanded[group.id]) && (
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      className={cn(
+                        "group flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-all",
+                        active
+                          ? "border-white/10 bg-white/12 text-white shadow-[0_10px_24px_rgba(15,23,42,0.16)]"
+                          : "border-transparent text-white/65 hover:border-white/10 hover:bg-white/7 hover:text-white",
+                        collapsed && "justify-center px-0",
+                      )}
+                      href={item.href as `/${string}`}
+                      key={item.href}
+                      onClick={onNavigate}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full transition-colors",
+                          active ? "bg-[var(--accent)]" : "bg-white/25 group-hover:bg-white/55",
+                        )}
+                      />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs bg-mist border border-rim rounded-full px-2.5 py-1 text-muted">
-              {venueSlug}.taproomos.com
-            </div>
+        ))}
+      </nav>
+
+      <div className="border-t border-white/10 p-3">
+        <div
+          className={cn(
+            "rounded-2xl border border-white/10 bg-white/5 p-3",
+            collapsed && "flex justify-center border-none bg-transparent p-0",
+          )}
+        >
+          <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
             <div
-              className="flex items-center justify-center rounded-full text-white text-sm font-bold cursor-pointer w-8 h-8"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
               style={{ background: "var(--accent)" }}
             >
               {userInitials}
             </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-white/90">{userLabel}</div>
+                <div className="mt-1 flex items-center gap-1 text-xs text-white/50">
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  <span>Venue admin access</span>
+                </div>
+              </div>
+            )}
           </div>
+          {!collapsed && (
+            <Link
+              className="mt-3 flex items-center gap-2 text-xs font-medium text-white/55 transition-colors hover:text-white"
+              href={`/v/${venueSlug}` as `/${string}`}
+              onClick={onNavigate}
+            >
+              <span>Open public venue</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          )}
         </div>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-7">
-          {children}
-        </main>
       </div>
-    </div>
+    </>
   );
 }

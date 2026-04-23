@@ -6,6 +6,27 @@
 
 :root {
   color-scheme: light;
+  --radius: 1rem;
+
+  --background: 32 33% 96%;
+  --foreground: 38 28% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 38 28% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 38 28% 9%;
+  --primary: 29 64% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 33 25% 92%;
+  --secondary-foreground: 38 28% 14%;
+  --muted: 35 20% 91%;
+  --muted-foreground: 20 5% 46%;
+  --accent-ui: 36 70% 92%;
+  --accent-foreground: 29 63% 30%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 35 16% 84%;
+  --input: 35 16% 84%;
+  --ring: 29 64% 48%;
 
   --accent: oklch(62% 0.18 65);
   --accent-light: oklch(96% 0.05 65);
@@ -29,8 +50,8 @@ html, body {
 }
 
 body {
-  background: var(--c-bg);
-  color: var(--c-text);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: 'DM Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -52,4 +73,3 @@ button {
 ::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
-

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { FieldHint, FieldLabel } from "@taproom/ui";
+import { FieldHint, FieldLabel } from "@/components/ui";
 
 type DateTimeFieldProps = {
   defaultValue?: string;

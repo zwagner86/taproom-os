@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Button, Card, FieldHint, FieldLabel, Input, Select, Textarea } from "@taproom/ui";
+import { Alert, Badge, Button, Card, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@/components/ui";
 
 import { sendBroadcastAction } from "@/server/actions/notifications";
 import { listVenueNotificationLogs } from "@/server/repositories/notifications";
@@ -19,33 +19,16 @@ export default async function VenueNotificationsPage({
   const action = sendBroadcastAction.bind(null, venue);
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Notifications
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            Broadcast announcements to your followers.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader subtitle="Broadcast announcements to your followers." title="Notifications" />
 
-      <div className="grid grid-cols-[1fr_1.4fr] gap-6 items-start">
+      {message && <Alert variant="success">{message}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
+
+      <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.4fr]">
         {/* Compose */}
         <Card>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New broadcast</div>
-
-          {message && (
-            <div className="mb-4 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-              {message}
-            </div>
-          )}
-          {error && (
-            <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-              {error}
-            </div>
-          )}
 
           <form action={action} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">

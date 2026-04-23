@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button, FieldHint, FieldLabel, Input, Select, Textarea } from "@taproom/ui";
+import { Button, FieldHint, FieldLabel, Input, Select, Textarea } from "@/components/ui";
 
 type ItemType = "pour" | "food" | "merch" | "event";
 
@@ -49,7 +49,7 @@ export function ItemTypeForm({ action, defaultValues, submitLabel = "+ Add item"
 
   return (
     <form action={action} className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <FieldLabel
             htmlFor="create-type"
@@ -92,7 +92,7 @@ export function ItemTypeForm({ action, defaultValues, submitLabel = "+ Add item"
       </div>
 
       {showStyle && (
-        <div className={`grid gap-3 ${showAbv ? "grid-cols-2" : "grid-cols-1"}`}>
+        <div className={`grid gap-3 ${showAbv ? "md:grid-cols-2" : "grid-cols-1"}`}>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="create-style">{styleLabel}</FieldLabel>
             <Input

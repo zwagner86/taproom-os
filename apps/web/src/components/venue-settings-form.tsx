@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Alert, Button, Card, FieldHint, FieldLabel, Input, Select } from "@taproom/ui";
+import { Alert, Button, Card, FieldHint, FieldLabel, Input, Select } from "@/components/ui";
 
 import { AccentPresetPicker } from "@/components/accent-preset-picker";
 import type { VenueSettingsState } from "@/server/actions/venues";
@@ -25,7 +25,7 @@ export function VenueSettingsForm({
       <Card>
         <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Basic Info</div>
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor="name" required>Venue name</FieldLabel>
               <Input aria-describedby="venue-name-hint" defaultValue={venue.name} id="name" name="name" required />
@@ -73,7 +73,7 @@ export function VenueSettingsForm({
         <p className="text-[12.5px] mb-4" style={{ color: "var(--c-muted)" }}>
           Customize how your menu and membership program are named throughout TaproomOS.
         </p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1">
             <FieldLabel
               htmlFor="menu_label"

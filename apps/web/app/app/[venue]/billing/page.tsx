@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { calculateApplicationFee } from "@taproom/domain";
-import { Alert, Badge, Button, Card, DataTable, PageHeader } from "@taproom/ui";
+import { Alert, Badge, Button, Card, DataTable, PageHeader } from "@/components/ui";
 
 import { getEnv } from "@/env";
 import {
@@ -51,7 +51,7 @@ export default async function VenueBillingPage({
       {message && <Alert variant="success" className="mb-5">{message}</Alert>}
       {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
-      <div className="grid grid-cols-[1fr_1.5fr] gap-6 items-start mb-6">
+      <div className="mb-6 grid items-start gap-6 xl:grid-cols-[1fr_1.5fr]">
         {/* Left column */}
         <div className="flex flex-col gap-4">
           {/* Stripe status */}

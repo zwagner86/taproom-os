@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { FieldHint, FieldLabel, Input } from "@taproom/ui";
+import { FieldHint, FieldLabel, Input } from "@/components/ui";
 
 import { normalizeHexColor } from "@/lib/colors";
 

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { sortBookingsForCheckIn } from "@taproom/domain";
-import { Badge, Button, Card, FieldHint, FieldLabel, Input } from "@taproom/ui";
+import { Alert, Badge, Button, Card, FieldHint, FieldLabel, Input, PageHeader } from "@/components/ui";
 import { notFound } from "next/navigation";
 
 import { getEnv } from "@/env";
@@ -47,28 +47,14 @@ export default async function VenueCheckInPage({
   const totalBooked = bookings.reduce((t, b) => t + b.party_size, 0);
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            {event.title}
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            Check-in · {formatDate(event.starts_at)} · {checkedInTotal}/{totalBooked} checked in
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        subtitle={`Check-in · ${formatDate(event.starts_at)} · ${checkedInTotal}/${totalBooked} checked in`}
+        title={event.title}
+      />
 
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
+      {message && <Alert variant="success">{message}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {/* Shared session */}
       <Card style={{ marginBottom: 20 }}>
@@ -77,7 +63,7 @@ export default async function VenueCheckInPage({
           Create one session per event and share the link with door staff. PIN is optional.
         </p>
         {session ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <div
               className="rounded-lg px-3 py-2.5"
               style={{ background: "var(--c-bg2)" }}
@@ -98,7 +84,7 @@ export default async function VenueCheckInPage({
             </div>
           </div>
         ) : (
-          <form action={createSessionAction} className="grid grid-cols-2 gap-3">
+          <form action={createSessionAction} className="grid gap-3 md:grid-cols-2">
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor="session-name">Session name</FieldLabel>
               <Input

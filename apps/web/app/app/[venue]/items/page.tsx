@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Alert, Badge, Button, Card, DataTable, EmptyState, PageHeader } from "@taproom/ui";
+import { Alert, Badge, Button, Card, DataTable, EmptyState, PageHeader } from "@/components/ui";
 
 import { Beer } from "lucide-react";
 

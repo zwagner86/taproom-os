@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatAbv, resolveDisplayedPrice } from "@taproom/domain";
-import { Badge, Button, Card, Input, Label } from "@taproom/ui";
+import { Alert, Badge, Button, Card, Input, Label } from "@/components/ui";
 
 import type { Database } from "../../../../supabase/types";
 import { type DisplayContent, type DisplaySurface, applyDisplaySurfaceRules, type DisplayViewConfig } from "@/lib/displays";
@@ -153,33 +153,49 @@ function DisplayShell({
 
   return (
     <main
-      className={isTv ? "min-h-screen overflow-hidden px-8 py-7" : isEmbed ? "min-h-screen px-4 py-5" : "mx-auto max-w-6xl px-5 py-10"}
+      className={
+        isTv
+          ? "min-h-screen overflow-hidden px-6 py-6 md:px-8 md:py-7"
+          : isEmbed
+            ? "min-h-screen px-3 py-4 md:px-4 md:py-5"
+            : "mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10"
+      }
       style={wrapperStyle}
     >
       <div className={isTv ? "mx-auto max-w-[1520px]" : "mx-auto max-w-5xl"}>
-        <header className={isTv ? "mb-7 flex items-end justify-between gap-8" : "mb-8"}>
+        <header
+          className={
+            isTv
+              ? "mb-7 flex items-end justify-between gap-8"
+              : "mb-8 overflow-hidden rounded-[2rem] border border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,242,234,0.92))] px-5 py-6 shadow-[0_24px_70px_rgba(80,54,31,0.08)] md:px-7"
+          }
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               {config.showLogo && venue.logo_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   alt={`${venue.name} logo`}
-                  className={isTv ? "h-14 w-14 rounded-2xl border border-white/15 object-cover" : "h-12 w-12 rounded-xl border border-rim object-cover"}
+                  className={
+                    isTv
+                      ? "h-14 w-14 rounded-2xl border border-white/15 object-cover"
+                      : "h-12 w-12 rounded-2xl border border-border/70 object-cover bg-white/80"
+                  }
                   src={venue.logo_url}
                 />
               )}
               <div>
                 {config.showVenueName && (
                   <div
-                    className={isTv ? "text-[13px] font-bold uppercase tracking-[0.28em]" : "text-[11px] font-bold uppercase tracking-[0.14em]"}
+                    className={isTv ? "text-[13px] font-bold uppercase tracking-[0.28em]" : "text-xs font-semibold uppercase tracking-[0.22em]"}
                     style={{ color: isTv ? "rgba(255,255,255,0.62)" : "var(--accent)" }}
                   >
                     {venue.name}
                   </div>
                 )}
                 <h1
-                  className={isTv ? "text-[54px] font-black leading-none tracking-[-1.4px]" : "text-[36px] font-black tracking-[-0.8px]"}
-                  style={{ color: isTv ? "white" : "var(--c-text)", fontFamily: "Lora, serif" }}
+                  className={isTv ? "text-[54px] font-black leading-none tracking-[-1.4px]" : "font-display text-4xl tracking-tight text-foreground md:text-5xl"}
+                  style={{ color: isTv ? "white" : undefined }}
                 >
                   {title}
                 </h1>
@@ -187,7 +203,7 @@ function DisplayShell({
             </div>
             {subtitle && (
               <p
-                className={isTv ? "mt-4 max-w-2xl text-[17px] leading-relaxed" : "mt-3 max-w-3xl text-[15px] leading-relaxed"}
+                className={isTv ? "mt-4 max-w-2xl text-[17px] leading-relaxed" : "mt-3 max-w-3xl text-sm leading-7 text-muted-foreground md:text-[15px]"}
                 style={{ color: isTv ? "rgba(255,255,255,0.68)" : "var(--c-muted)" }}
               >
                 {subtitle}
@@ -276,18 +292,17 @@ function DisplayItems({
   }
 
   return (
-    <div className="rounded-[22px] border bg-white" style={{ borderColor: "var(--c-border)" }}>
+    <div className="overflow-hidden rounded-[2rem] border border-border/80 bg-white/92 shadow-[0_18px_48px_rgba(80,54,31,0.06)]">
       {grouped.map((group, groupIndex) => (
-        <section className={groupIndex > 0 ? "border-t" : ""} key={group.label} style={{ borderColor: "var(--c-border)" }}>
-          <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--c-muted)" }}>
+        <section className={groupIndex > 0 ? "border-t border-border/70" : ""} key={group.label}>
+          <div className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             {group.label}
           </div>
           <div className="px-5">
             {group.items.map((item, index) => (
               <article
-                className={index > 0 ? "border-t py-4" : "py-4"}
+                className={index > 0 ? "border-t border-border/70 py-4" : "py-4"}
                 key={item.id}
-                style={{ borderColor: "var(--c-border)" }}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -372,9 +387,13 @@ function DisplayEvents({
   return (
     <div className="flex flex-col gap-4">
       {events.map((event) => (
-        <Card key={event.id} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+        <Card
+          className="border-border/80 bg-white/92 shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
+          key={event.id}
+          style={{ display: "flex", gap: 16, alignItems: "flex-start" }}
+        >
           <div
-            className="flex-shrink-0 rounded-[10px] py-2.5 text-center"
+            className="flex-shrink-0 rounded-[16px] py-3 text-center"
             style={{ width: 56, background: "var(--accent-light)" }}
           >
             <div className="text-[10px] font-bold uppercase tracking-[0.8px]" style={{ color: "var(--accent-dark)" }}>
@@ -475,9 +494,12 @@ function DisplayMemberships({
         const canShowForm = Boolean(config.showMembershipForm && paymentCapability?.canSellMemberships);
 
         return (
-          <Card key={plan.id}>
+          <Card
+            className="border-border/80 bg-white/92 shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
+            key={plan.id}
+          >
             <div className="mb-4">
-              <div className="mb-1 font-bold text-[18px] tracking-[-0.3px]" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
+              <div className="mb-1 font-display text-2xl tracking-tight text-foreground">
                 {plan.name}
               </div>
               <div className="mb-2 flex items-baseline gap-1">
@@ -496,20 +518,20 @@ function DisplayMemberships({
             {config.showMembershipForm ? (
               <>
                 {paymentCapability && !paymentCapability.canSellMemberships && (
-                  <div className="mb-4 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+                  <Alert className="mb-4" variant="warning">
                     <strong>Membership signup is unavailable right now.</strong> {getMembershipGateCopy()}
-                  </div>
+                  </Alert>
                 )}
                 <form action={action} className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1.5">
                     <Label htmlFor={`member-name-${plan.id}`}>Your name <span style={{ color: "var(--accent)" }}>*</span></Label>
                     <Input disabled={!canShowForm} id={`member-name-${plan.id}`} name="member_name" required />
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1.5">
                     <Label htmlFor={`member-email-${plan.id}`}>Email</Label>
                     <Input disabled={!canShowForm} id={`member-email-${plan.id}`} name="member_email" type="email" />
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1.5">
                     <Label htmlFor={`member-phone-${plan.id}`}>Phone</Label>
                     <Input disabled={!canShowForm} id={`member-phone-${plan.id}`} name="member_phone" />
                   </div>
@@ -547,7 +569,7 @@ function DisplayEmptyState({
 }) {
   return (
     <div
-      className="rounded-[22px] border px-6 py-10 text-center"
+      className="rounded-[2rem] border px-6 py-10 text-center shadow-[0_18px_48px_rgba(80,54,31,0.04)]"
       style={config.surface === "tv"
         ? {
             background: "rgba(255,255,255,0.06)",
@@ -555,7 +577,7 @@ function DisplayEmptyState({
             color: "rgba(255,255,255,0.72)",
           }
         : {
-            background: "white",
+            background: "rgba(255,255,255,0.92)",
             borderColor: "var(--c-border)",
             color: "var(--c-muted)",
           }}

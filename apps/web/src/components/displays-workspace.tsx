@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge, Button, FieldHint, FieldLabel, Input, Select, Tabs, Toggle, cn } from "@taproom/ui";
+import { Badge, Button, FieldHint, FieldLabel, Input, Select, Sheet, SheetContent, Tabs, Toggle, cn } from "@/components/ui";
 
 import {
   getDraftDisplayContent,
@@ -1361,47 +1361,41 @@ function DisplayAdminDrawer({
   title: string;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.28)]"
-      onClick={onClose}
-    >
-      <div className="flex h-full w-full justify-end">
-        <div
-          aria-label={title}
-          aria-modal="true"
-          className="flex h-full w-full flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(247,244,240,0.99))] shadow-[0_28px_80px_rgba(15,23,42,0.24)] lg:max-w-[1140px]"
-          onClick={(event) => event.stopPropagation()}
-          role="dialog"
-        >
-          <div className="border-b px-5 py-4 md:px-6" style={{ borderColor: "var(--c-border)" }}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: "var(--c-text)" }}>
-                  {title}
-                </div>
-                {badges && <div className="mt-3 flex flex-wrap gap-2">{badges}</div>}
+    <Sheet onOpenChange={(nextOpen) => !nextOpen && onClose()} open>
+      <SheetContent
+        aria-label={title}
+        className="w-full overflow-hidden border-l-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(247,244,240,0.99))] p-0 sm:max-w-[min(100vw,1140px)]"
+        hideClose
+        side="right"
+      >
+        <div className="border-b px-5 py-4 md:px-6" style={{ borderColor: "var(--c-border)" }}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: "var(--c-text)" }}>
+                {title}
               </div>
-              <Button onClick={onClose} size="sm" type="button" variant="secondary">
-                Close
-              </Button>
+              {badges && <div className="mt-3 flex flex-wrap gap-2">{badges}</div>}
             </div>
-          </div>
-
-          <div className="min-h-0 flex-1 lg:flex">
-            <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-            <aside
-              className="min-h-0 w-full shrink-0 overflow-y-auto border-t lg:w-[420px] lg:border-l lg:border-t-0 xl:w-[460px]"
-              style={{
-                background: "linear-gradient(180deg, rgba(250,247,243,0.96), rgba(255,255,255,0.98))",
-                borderColor: "var(--c-border)",
-              }}
-            >
-              {preview}
-            </aside>
+            <Button onClick={onClose} size="sm" type="button" variant="secondary">
+              Close
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+
+        <div className="min-h-0 flex-1 lg:flex">
+          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          <aside
+            className="min-h-0 w-full shrink-0 overflow-y-auto border-t lg:w-[420px] lg:border-l lg:border-t-0 xl:w-[460px]"
+            style={{
+              background: "linear-gradient(180deg, rgba(250,247,243,0.96), rgba(255,255,255,0.98))",
+              borderColor: "var(--c-border)",
+            }}
+          >
+            {preview}
+          </aside>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

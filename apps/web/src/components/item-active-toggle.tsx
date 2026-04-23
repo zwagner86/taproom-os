@@ -2,7 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 
-import { Toggle } from "@taproom/ui";
+import { Toggle } from "@/components/ui";
 
 export function ItemActiveToggle({
   active,

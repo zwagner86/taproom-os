@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { Badge, Button, Card, FieldHint, FieldLabel, Input, Select } from "@taproom/ui";
+import { Alert, Badge, Button, Card, FieldHint, FieldLabel, Input, PageHeader, Select } from "@/components/ui";
 
 import { startSquareConnectAction, linkSquareItemAction, syncSquareItemsAction } from "@/server/actions/providers";
 import { listVenueItems } from "@/server/repositories/items";
@@ -40,30 +40,16 @@ export default async function VenueSquarePage({
     connection?.status === "error" ? "error" : "default";
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.5px] mb-1" style={{ color: "var(--c-text)" }}>
-            Square Integration
-          </h1>
-          <p className="text-[13.5px]" style={{ color: "var(--c-muted)" }}>
-            Link TaproomOS items to Square catalog variations for live price snapshots.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        subtitle="Link TaproomOS items to Square catalog variations for live price snapshots."
+        title="Square Integration"
+      />
 
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
+      {message && <Alert variant="success">{message}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="grid grid-cols-[1fr_1.5fr] gap-6 items-start">
+      <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.5fr]">
         {/* Left: connection status */}
         <div className="flex flex-col gap-4">
           <Card>

@@ -2,8 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 
-import { Badge, Button, Card, Input, Label } from "@taproom/ui";
-
+import { Alert, Badge, Button, Card, Input, Label } from "@/components/ui";
 import { PublicFollowCard } from "@/components/public-follow-card";
 import { getPaidEventGateCopy } from "@/lib/venue-payment-capability";
 import { createFreeEventBookingAction, createPaidEventCheckoutAction } from "@/server/actions/events";
@@ -33,10 +32,9 @@ export default async function PublicEventDetailPage({
   const isFree = event.price_cents === null || event.price_cents === 0;
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10">
-      {/* Event header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
+    <main className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
+      <section className="rounded-[2rem] border border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,242,234,0.92))] px-6 py-7 shadow-[0_24px_70px_rgba(80,54,31,0.08)] md:px-8">
+        <div className="mb-5 flex flex-wrap items-center gap-2">
           <Badge variant="accent">Event</Badge>
           {isFree ? (
             <Badge variant="success">Free RSVP</Badge>
@@ -45,121 +43,88 @@ export default async function PublicEventDetailPage({
           )}
         </div>
 
-        <h1
-          className="text-[34px] font-black tracking-[-0.8px] mb-4"
-          style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}
-        >
-          {event.title}
-        </h1>
+        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <h1 className="font-display text-4xl tracking-tight text-foreground md:text-5xl">{event.title}</h1>
+            {event.description && (
+              <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">{event.description}</p>
+            )}
+          </div>
 
-        {/* Structured meta row */}
-        <div
-          className="flex flex-wrap gap-x-8 gap-y-3 py-4 border-y"
-          style={{ borderColor: "var(--c-border)" }}
-        >
-          <div>
-            <div
-              className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
-              style={{ color: "var(--c-muted)" }}
-            >
-              Date &amp; Time
-            </div>
-            <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
-              {formatDate(event.starts_at)}
-            </div>
-          </div>
-          <div>
-            <div
-              className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
-              style={{ color: "var(--c-muted)" }}
-            >
-              Capacity
-            </div>
-            <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
-              {event.capacity ?? "Open"}
-            </div>
-          </div>
-          <div>
-            <div
-              className="text-[11px] font-bold uppercase tracking-[0.8px] mb-1"
-              style={{ color: "var(--c-muted)" }}
-            >
-              Price
-            </div>
-            <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
-              {isFree ? "Free" : formatCurrency(event.price_cents!, event.currency)}
-            </div>
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            {[
+              { label: "Date & time", value: formatDate(event.starts_at) },
+              { label: "Capacity", value: String(event.capacity ?? "Open") },
+              { label: "Price", value: isFree ? "Free" : formatCurrency(event.price_cents!, event.currency) },
+            ].map((item) => (
+              <div
+                className="rounded-3xl border border-border/70 bg-white/70 px-4 py-4"
+                key={item.label}
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  {item.label}
+                </div>
+                <div className="mt-2 text-sm font-semibold leading-6 text-foreground">{item.value}</div>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {event.description && (
-          <p className="text-[15px] leading-relaxed mt-4" style={{ color: "var(--c-text)" }}>
-            {event.description}
-          </p>
-        )}
+      <div className="mt-6 space-y-4">
+        {checkout === "success" && <Alert variant="success">Checkout completed. Your confirmation will appear shortly.</Alert>}
+        {checkout === "cancel" && <Alert variant="warning">Checkout was canceled before payment completed.</Alert>}
+        {message && <Alert variant="success">{message}</Alert>}
+        {error && <Alert variant="error">{error}</Alert>}
       </div>
 
-      {checkout === "success" && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          Checkout completed. Your confirmation will appear shortly.
-        </div>
-      )}
-      {checkout === "cancel" && (
-        <div className="mb-5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
-          Checkout was canceled before payment completed.
-        </div>
-      )}
-      {message && (
-        <div className="mb-5 rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-800">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="mb-5 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800">
-          {error}
-        </div>
-      )}
-
-      {paidEventUnavailable ? (
-        <Card style={{ marginBottom: 24 }}>
-          <div className="font-semibold mb-2" style={{ color: "var(--c-text)" }}>Paid ticketing is unavailable right now.</div>
-          <p className="text-[13.5px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-            {getPaidEventGateCopy()} This venue can still use TaproomOS for menus, free events, displays, follows,
-            and Square-linked catalog management.
-          </p>
-        </Card>
-      ) : (
-        <Card style={{ marginBottom: 24 }}>
-          <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>
-            {isFree ? "RSVP for this event" : "Reserve your spot"}
-          </div>
-          <form action={isFree ? rsvpAction : paidAction} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="booking-name">Your name <span style={{ color: "var(--accent)" }}>*</span></Label>
-              <Input id="booking-name" name="purchaser_name" placeholder="Sam Taproom" required />
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+        {paidEventUnavailable ? (
+          <Card className="border-border/80 bg-white/88 shadow-[0_18px_48px_rgba(80,54,31,0.06)]">
+            <div className="text-lg font-semibold text-foreground">Paid ticketing is unavailable right now.</div>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              {getPaidEventGateCopy()} This venue can still use TaproomOS for menus, free events, displays, follows,
+              and Square-linked catalog management.
+            </p>
+          </Card>
+        ) : (
+          <Card className="border-border/80 bg-white/88 shadow-[0_18px_48px_rgba(80,54,31,0.06)]">
+            <div className="mb-5 text-lg font-semibold text-foreground">
+              {isFree ? "RSVP for this event" : "Reserve your spot"}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="booking-email">Email</Label>
-                <Input id="booking-email" name="purchaser_email" placeholder="sam@example.com" type="email" />
+            <form action={isFree ? rsvpAction : paidAction} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="booking-name">
+                  Your name <span className="text-primary">*</span>
+                </Label>
+                <Input id="booking-name" name="purchaser_name" placeholder="Sam Taproom" required />
               </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="booking-phone">Phone</Label>
-                <Input id="booking-phone" name="purchaser_phone" placeholder="+1 555 123 4567" />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="booking-party-size">Party size</Label>
-              <Input defaultValue="1" id="booking-party-size" min="1" name="party_size" style={{ width: 100 }} type="number" />
-            </div>
-            <Button className="w-full" type="submit">
-              {isFree ? "Confirm RSVP" : "Continue to checkout"}
-            </Button>
-          </form>
-        </Card>
-      )}
 
-      <PublicFollowCard returnPath={`/v/${venue}/events/${eventSlug}`} venueSlug={venue} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="booking-email">Email</Label>
+                  <Input id="booking-email" name="purchaser_email" placeholder="sam@example.com" type="email" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="booking-phone">Phone</Label>
+                  <Input id="booking-phone" name="purchaser_phone" placeholder="+1 555 123 4567" />
+                </div>
+              </div>
+
+              <div className="max-w-[9rem] space-y-1.5">
+                <Label htmlFor="booking-party-size">Party size</Label>
+                <Input defaultValue="1" id="booking-party-size" min="1" name="party_size" type="number" />
+              </div>
+
+              <Button className="w-full md:w-auto" type="submit">
+                {isFree ? "Confirm RSVP" : "Continue to checkout"}
+              </Button>
+            </form>
+          </Card>
+        )}
+
+        <PublicFollowCard returnPath={`/v/${venue}/events/${eventSlug}`} venueSlug={venue} title="Get future event drops" />
+      </div>
     </main>
   );
 }
