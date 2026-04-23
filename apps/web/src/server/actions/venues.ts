@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
+import { normalizeHexColor } from "@/lib/colors";
 import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 import { isPlatformAdmin, requireUser } from "@/server/auth";
@@ -136,9 +137,14 @@ export async function updateVenueSettingsAction(
 ): Promise<VenueSettingsState> {
   const access = await getVenueAccessOrRedirect(venueSlug);
   const supabase = await createServerSupabaseClient();
+  const accentColor = normalizeHexColor(String(formData.get("accent_color") ?? access.venue.accent_color));
+
+  if (!accentColor) {
+    return { error: "Accent color must be a 3- or 6-digit hex value like #C96B2C." };
+  }
 
   const updates: Database["public"]["Tables"]["venues"]["Update"] = {
-    accent_color: String(formData.get("accent_color") ?? access.venue.accent_color),
+    accent_color: accentColor,
     logo_url: normalizeOptionalString(formData.get("logo_url")),
     membership_label: String(formData.get("membership_label") ?? access.venue.membership_label).trim() || "Club",
     menu_label: String(formData.get("menu_label") ?? access.venue.menu_label).trim() || "Tap List",
@@ -172,4 +178,3 @@ async function getVenueAccessOrRedirect(slug: string) {
     redirect("/");
   }
 }
-
