@@ -1,17 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { Button, FieldHint, FieldLabel, Input, Select, Tabs, Toggle, cn } from "@taproom/ui";
+import { Badge, Button, FieldHint, FieldLabel, Input, Select, Tabs, Toggle, cn } from "@taproom/ui";
 
 import {
-  clampDisplayPreviewWidth,
-  DEFAULT_DISPLAY_PREVIEW_WIDTH,
-  DISPLAY_PREVIEW_WIDTH_STORAGE_KEY,
+  getDraftDisplayContent,
   normalizeDisplayWorkspaceState,
   serializeDisplayWorkspaceState,
-  type DisplaySelectionToken,
+  type DisplayContentFilter,
+  type DisplayPlaylistDrawerState,
+  type DisplayViewDrawerState,
   type DisplayWorkspaceState,
 } from "@/lib/display-admin";
 import {
@@ -26,6 +26,7 @@ import {
   getDefaultDisplayViewOptions,
   hydrateDisplayViewConfig,
   type DisplayContent,
+  type DisplayDensity,
   type DisplayPlaylistConfig,
   type DisplayViewOptions,
   type SavedDisplaySurface,
@@ -41,6 +42,7 @@ type ViewFormMode = "draft" | "empty" | "public" | "saved";
 type PlaylistFormMode = "draft" | "empty" | "saved";
 
 type ViewFormState = {
+  content: DisplayContent;
   mode: ViewFormMode;
   name: string;
   options: DisplayViewOptions;
@@ -87,11 +89,11 @@ const BOOLEAN_FIELDS: Array<{
   { description: "Show the membership checkout form when the venue can sell memberships.", key: "showMembershipForm", label: "Membership form" },
 ];
 
-const PREVIEW_SCALE_BY_SURFACE = {
-  embed: 0.6,
-  public: 0.58,
-  tv: 0.5,
-} as const;
+const FILTERS: DisplayContentFilter[] = ["all", ...DISPLAY_CONTENTS];
+const SAVED_SURFACE_TITLES: Record<SavedDisplaySurface, string> = {
+  embed: "Embeds",
+  tv: "TV Displays",
+};
 
 export function DisplaysWorkspace({
   appUrl,
@@ -115,81 +117,56 @@ export function DisplaysWorkspace({
   views: DisplayViewRecord[];
 }) {
   const pathname = `/app/${venueSlug}/displays`;
-  const initialWorkspaceState = normalizeDisplayWorkspaceState(initialSearchParams);
+  const initialWorkspaceState = useMemo(
+    () => normalizeDisplayWorkspaceState(initialSearchParams),
+    [
+      initialSearchParams.content,
+      initialSearchParams.playlist,
+      initialSearchParams.surface,
+      initialSearchParams.tab,
+      initialSearchParams.view,
+    ],
+  );
+  const initialViewDrawer = initialWorkspaceState.drawer?.kind === "view" ? initialWorkspaceState.drawer : null;
+  const initialPlaylistDrawer = initialWorkspaceState.drawer?.kind === "playlist" ? initialWorkspaceState.drawer : null;
+  const publicViewsByContent = useMemo(
+    () =>
+      new Map(
+        views
+          .filter((view) => view.surface === "public")
+          .map((view) => [view.content, view] as const),
+      ),
+    [views],
+  );
+
   const [workspaceState, setWorkspaceState] = useState<DisplayWorkspaceState>(initialWorkspaceState);
-  const [previewWidth, setPreviewWidth] = useState(DEFAULT_DISPLAY_PREVIEW_WIDTH);
-  const [isResizing, setIsResizing] = useState(false);
-  const splitRef = useRef<HTMLDivElement | null>(null);
+  const [tvFilter, setTvFilter] = useState<DisplayContentFilter>("all");
+  const [embedFilter, setEmbedFilter] = useState<DisplayContentFilter>("all");
+  const [viewFormState, setViewFormState] = useState<ViewFormState>(() =>
+    getInitialViewFormState({
+      drawer: initialViewDrawer,
+      publicView: initialViewDrawer?.mode === "public" ? publicViewsByContent.get(initialViewDrawer.content) ?? null : null,
+      selectedView:
+        initialViewDrawer?.mode === "saved"
+          ? views.find((view) => view.id === initialViewDrawer.viewId && view.surface === initialViewDrawer.surface) ?? null
+          : null,
+    }),
+  );
+  const [playlistFormState, setPlaylistFormState] = useState<PlaylistFormState>(() =>
+    getInitialPlaylistFormState(
+      initialPlaylistDrawer?.mode === "saved"
+        ? playlists.find(
+            (playlist) =>
+              playlist.id === initialPlaylistDrawer.playlistId && playlist.surface === initialPlaylistDrawer.surface,
+          ) ?? null
+        : null,
+      initialPlaylistDrawer,
+    ),
+  );
 
   useEffect(() => {
     setWorkspaceState(initialWorkspaceState);
-  }, [
-    initialWorkspaceState.content,
-    initialWorkspaceState.playlist,
-    initialWorkspaceState.surface,
-    initialWorkspaceState.tab,
-    initialWorkspaceState.view,
-  ]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const storedWidth = window.localStorage.getItem(DISPLAY_PREVIEW_WIDTH_STORAGE_KEY);
-
-    if (!storedWidth) {
-      return;
-    }
-
-    const parsedWidth = Number(storedWidth);
-
-    if (!Number.isFinite(parsedWidth)) {
-      return;
-    }
-
-    setPreviewWidth(clampDisplayPreviewWidth(parsedWidth));
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(DISPLAY_PREVIEW_WIDTH_STORAGE_KEY, String(previewWidth));
-  }, [previewWidth]);
-
-  useEffect(() => {
-    if (!isResizing) {
-      return;
-    }
-
-    function handlePointerMove(event: PointerEvent) {
-      const bounds = splitRef.current?.getBoundingClientRect();
-
-      if (!bounds) {
-        return;
-      }
-
-      setPreviewWidth(clampDisplayPreviewWidth(bounds.right - event.clientX));
-    }
-
-    function handlePointerUp() {
-      setIsResizing(false);
-    }
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing]);
+  }, [initialWorkspaceState]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -201,105 +178,89 @@ export function DisplaysWorkspace({
     window.history.replaceState(null, "", nextUrl);
   }, [pathname, workspaceState]);
 
-  const publicView = useMemo(
-    () => views.find((view) => view.content === workspaceState.content && view.surface === "public") ?? null,
-    [views, workspaceState.content],
-  );
-  const currentSurfaceViews = useMemo(
-    () =>
-      views.filter(
-        (view) =>
-          view.content === workspaceState.content &&
-          view.surface === workspaceState.surface &&
-          view.surface !== "public",
-      ),
-    [views, workspaceState.content, workspaceState.surface],
-  );
-  const tvViews = useMemo(
-    () => views.filter((view) => view.content === workspaceState.content && view.surface === "tv"),
-    [views, workspaceState.content],
-  );
-  const embedViews = useMemo(
-    () => views.filter((view) => view.content === workspaceState.content && view.surface === "embed"),
-    [views, workspaceState.content],
-  );
-  const selectedView =
-    workspaceState.tab === "views" &&
-    workspaceState.surface !== "public" &&
-    workspaceState.view &&
-    workspaceState.view !== "new"
-      ? currentSurfaceViews.find((view) => view.id === workspaceState.view) ?? null
-      : null;
-  const activePlaylistSurface = workspaceState.tab === "playlists" && workspaceState.surface !== "public"
-    ? workspaceState.surface
-    : "tv";
-  const surfacePlaylists = useMemo(
-    () => playlists.filter((playlist) => playlist.surface === activePlaylistSurface),
-    [activePlaylistSurface, playlists],
-  );
-  const selectedPlaylist =
-    workspaceState.tab === "playlists" && workspaceState.playlist && workspaceState.playlist !== "new"
-      ? surfacePlaylists.find((playlist) => playlist.id === workspaceState.playlist) ?? null
-      : null;
-  const activePlaylistViews = useMemo(
-    () =>
-      views.filter(
-        (view) =>
-          view.surface === activePlaylistSurface &&
-          Boolean(view.slug),
-      ),
-    [activePlaylistSurface, views],
-  );
+  useEffect(() => {
+    if (typeof window === "undefined" || !workspaceState.drawer) {
+      return;
+    }
 
-  const [viewFormState, setViewFormState] = useState<ViewFormState>(() =>
-    getInitialViewFormState({
-      content: initialWorkspaceState.content,
-      publicView: initialWorkspaceState.surface === "public" ? publicView : null,
-      selectedView: initialWorkspaceState.surface !== "public" ? selectedView : null,
-      surface: initialWorkspaceState.surface,
-      viewToken: initialWorkspaceState.view,
-    }),
-  );
-  const [playlistFormState, setPlaylistFormState] = useState<PlaylistFormState>(() =>
-    getInitialPlaylistFormState(selectedPlaylist, initialWorkspaceState.playlist),
-  );
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setWorkspaceState((current) => ({ ...current, drawer: null }));
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [workspaceState.drawer]);
+
+  const drawerView = workspaceState.drawer?.kind === "view" ? workspaceState.drawer : null;
+  const drawerPlaylist = workspaceState.drawer?.kind === "playlist" ? workspaceState.drawer : null;
+  const publicDrawerView = drawerView?.mode === "public" ? publicViewsByContent.get(drawerView.content) ?? null : null;
+  const selectedSavedView =
+    drawerView?.mode === "saved"
+      ? views.find((view) => view.id === drawerView.viewId && view.surface === drawerView.surface) ?? null
+      : null;
+  const selectedSavedPlaylist =
+    drawerPlaylist?.mode === "saved"
+      ? playlists.find(
+          (playlist) =>
+            playlist.id === drawerPlaylist.playlistId && playlist.surface === drawerPlaylist.surface,
+        ) ?? null
+      : null;
 
   useEffect(() => {
     setViewFormState(
       getInitialViewFormState({
-        content: workspaceState.content,
-        publicView,
-        selectedView,
-        surface: workspaceState.surface,
-        viewToken: workspaceState.view,
+        drawer: drawerView,
+        publicView: publicDrawerView,
+        selectedView: selectedSavedView,
       }),
     );
-  }, [publicView, selectedView, workspaceState.content, workspaceState.surface, workspaceState.view]);
+  }, [drawerView, publicDrawerView, selectedSavedView]);
 
   useEffect(() => {
-    setPlaylistFormState(getInitialPlaylistFormState(selectedPlaylist, workspaceState.playlist));
-  }, [selectedPlaylist, workspaceState.playlist]);
+    setPlaylistFormState(getInitialPlaylistFormState(selectedSavedPlaylist, drawerPlaylist));
+  }, [drawerPlaylist, selectedSavedPlaylist]);
 
+  const tvViews = useMemo(() => views.filter((view) => view.surface === "tv"), [views]);
+  const embedViews = useMemo(() => views.filter((view) => view.surface === "embed"), [views]);
+  const filteredTvViews = useMemo(() => filterSavedViews(tvViews, tvFilter), [tvFilter, tvViews]);
+  const filteredEmbedViews = useMemo(() => filterSavedViews(embedViews, embedFilter), [embedFilter, embedViews]);
+  const playlistSurfaceViews = useMemo(
+    () =>
+      views.filter(
+        (view) => view.surface === (drawerPlaylist?.surface ?? "tv") && Boolean(view.slug),
+      ),
+    [drawerPlaylist?.surface, views],
+  );
+
+  const currentViewSurface = drawerView?.surface ?? "public";
   const normalizedViewConfig = useMemo(
-    () => hydrateDisplayViewConfig(viewFormState.options, workspaceState.content, workspaceState.surface),
-    [viewFormState.options, workspaceState.content, workspaceState.surface],
+    () => hydrateDisplayViewConfig(viewFormState.options, viewFormState.content, currentViewSurface),
+    [currentViewSurface, viewFormState.content, viewFormState.options],
   );
   const currentViewPreviewPath = useMemo(
     () => buildAdHocDisplayPath(venueSlug, normalizedViewConfig),
     [normalizedViewConfig, venueSlug],
   );
   const currentViewPreviewUrl = `${appUrl}${currentViewPreviewPath}`;
-  const currentPublicUrl = `${appUrl}${getCanonicalPublicDisplayPath(venueSlug, workspaceState.content)}`;
+  const currentPublicUrl = `${appUrl}${getCanonicalPublicDisplayPath(venueSlug, viewFormState.content)}`;
   const currentSavedViewUrl =
-    workspaceState.surface !== "public" && viewFormState.mode === "saved" && viewFormState.slug
-      ? `${appUrl}${buildSavedDisplayPath(venueSlug, viewFormState.slug, workspaceState.surface)}`
+    drawerView && drawerView.surface !== "public" && viewFormState.mode === "saved" && viewFormState.slug
+      ? `${appUrl}${buildSavedDisplayPath(venueSlug, viewFormState.slug, drawerView.surface)}`
       : null;
   const currentSavedPlaylistUrl =
-    workspaceState.tab === "playlists" && playlistFormState.mode === "saved" && playlistFormState.slug
-      ? `${appUrl}${buildSavedDisplayPath(venueSlug, playlistFormState.slug, activePlaylistSurface)}`
+    drawerPlaylist && playlistFormState.mode === "saved" && playlistFormState.slug
+      ? `${appUrl}${buildSavedDisplayPath(venueSlug, playlistFormState.slug, drawerPlaylist.surface)}`
       : null;
   const playlistPreviewSlides = useMemo(() => {
-    const viewById = new Map(activePlaylistViews.map((view) => [view.id, view]));
+    const viewById = new Map(playlistSurfaceViews.map((view) => [view.id, view]));
 
     return playlistFormState.config.slides
       .map((slide) => {
@@ -311,559 +272,712 @@ export function DisplaysWorkspace({
 
         return {
           durationSeconds: slide.durationSeconds,
-          src: buildSavedDisplayPath(venueSlug, referencedView.slug, activePlaylistSurface),
+          src: buildSavedDisplayPath(venueSlug, referencedView.slug, drawerPlaylist?.surface ?? "tv"),
           title: referencedView.name ?? DISPLAY_CONTENT_LABELS[referencedView.content],
         };
       })
       .filter((slide): slide is NonNullable<typeof slide> => Boolean(slide));
-  }, [activePlaylistSurface, activePlaylistViews, playlistFormState.config.slides, venueSlug]);
+  }, [drawerPlaylist?.surface, playlistFormState.config.slides, playlistSurfaceViews, venueSlug]);
 
-  function updateWorkspace(next: Partial<DisplayWorkspaceState>) {
-    setWorkspaceState((current) => ({ ...current, ...next }));
+  const tvContentCounts = useMemo(() => countViewsByContent(tvViews), [tvViews]);
+  const embedContentCounts = useMemo(() => countViewsByContent(embedViews), [embedViews]);
+
+  function closeDrawer() {
+    setWorkspaceState((current) => ({ ...current, drawer: null }));
   }
 
   function handleTopTabChange(nextTab: string) {
-    if (nextTab === "views") {
-      setWorkspaceState((current) => ({
-        ...current,
-        playlist: null,
-        surface: "public",
-        tab: "views",
-        view: null,
-      }));
-      return;
-    }
-
-    setWorkspaceState((current) => ({
-      ...current,
-      playlist: null,
-      surface: current.surface === "public" ? "tv" : current.surface,
-      tab: "playlists",
-      view: null,
-    }));
-  }
-
-  function handleContentChange(nextContent: string) {
-    setWorkspaceState((current) => ({
-      ...current,
-      content: nextContent as DisplayContent,
-      surface: "public",
-      view: null,
-    }));
-  }
-
-  function handleSelectPublicSlot() {
-    updateWorkspace({ surface: "public", view: null });
-  }
-
-  function handleSelectSavedView(surface: SavedDisplaySurface, viewId: string) {
-    updateWorkspace({ surface, view: viewId });
-  }
-
-  function handleCreateView(surface: SavedDisplaySurface) {
-    updateWorkspace({ surface, view: "new" });
-  }
-
-  function handlePlaylistSurfaceChange(nextSurface: string) {
-    updateWorkspace({
-      playlist: null,
-      surface: nextSurface as SavedDisplaySurface,
+    setWorkspaceState({
+      drawer: null,
+      tab: nextTab === "playlists" ? "playlists" : "views",
     });
   }
 
-  function handleSelectSavedPlaylist(playlistId: string) {
-    updateWorkspace({ playlist: playlistId, surface: activePlaylistSurface });
+  function openPublicView(content: DisplayContent) {
+    setWorkspaceState({
+      drawer: {
+        content,
+        kind: "view",
+        mode: "public",
+        surface: "public",
+        viewId: null,
+      },
+      tab: "views",
+    });
   }
 
-  function handleCreatePlaylist() {
-    updateWorkspace({ playlist: "new", surface: activePlaylistSurface });
+  function openDraftView(surface: SavedDisplaySurface) {
+    const filter = surface === "tv" ? tvFilter : embedFilter;
+
+    setWorkspaceState({
+      drawer: {
+        content: getDraftDisplayContent(filter),
+        kind: "view",
+        mode: "draft",
+        surface,
+        viewId: null,
+      },
+      tab: "views",
+    });
   }
 
-  const previewContent = workspaceState.tab === "views"
-    ? renderViewPreview({
-        currentPublicUrl,
-        currentSavedViewUrl,
-        previewPath: currentViewPreviewPath,
-        previewScale: PREVIEW_SCALE_BY_SURFACE[workspaceState.surface],
-        previewUrl: currentViewPreviewUrl,
-        surface: workspaceState.surface,
-        viewFormState,
-      })
-    : renderPlaylistPreview({
-        activePlaylistSurface,
-        playlistFormState,
-        playlistPreviewSlides,
-        savedPlaylistUrl: currentSavedPlaylistUrl,
-      });
+  function openSavedView(view: DisplayViewRecord) {
+    setWorkspaceState({
+      drawer: {
+        content: view.content,
+        kind: "view",
+        mode: "saved",
+        surface: view.surface as SavedDisplaySurface,
+        viewId: view.id,
+      },
+      tab: "views",
+    });
+  }
+
+  function openDraftPlaylist(surface: SavedDisplaySurface) {
+    setWorkspaceState({
+      drawer: {
+        kind: "playlist",
+        mode: "draft",
+        playlistId: null,
+        surface,
+      },
+      tab: "playlists",
+    });
+  }
+
+  function openSavedPlaylist(playlist: DisplayPlaylistRecord) {
+    setWorkspaceState({
+      drawer: {
+        kind: "playlist",
+        mode: "saved",
+        playlistId: playlist.id,
+        surface: playlist.surface,
+      },
+      tab: "playlists",
+    });
+  }
 
   return (
-    <section
-      className="overflow-hidden rounded-[28px] border shadow-panel"
-      style={{
-        background: "linear-gradient(180deg, rgba(255,255,255,0.98), color-mix(in srgb, var(--c-bg2) 74%, white))",
-        borderColor: "var(--c-border)",
-      }}
-    >
-      <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
-        <Tabs
-          active={workspaceState.tab}
-          className="mb-0 border-b-0"
-          onChange={handleTopTabChange}
-          tabs={[
-            { id: "views", label: "Views" },
-            { id: "playlists", label: "Playlists" },
-          ]}
-        />
-      </div>
+    <>
+      <section
+        className="overflow-hidden rounded-[28px] border shadow-panel"
+        style={{
+          background: "linear-gradient(180deg, rgba(255,255,255,0.98), color-mix(in srgb, var(--c-bg2) 74%, white))",
+          borderColor: "var(--c-border)",
+        }}
+      >
+        <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
+          <Tabs
+            active={workspaceState.tab}
+            className="mb-0 border-b-0"
+            onChange={handleTopTabChange}
+            tabs={[
+              { id: "views", label: "Views" },
+              { id: "playlists", label: "Playlists" },
+            ]}
+          />
+        </div>
 
-      <div className="min-w-0" ref={splitRef}>
-        <div className="lg:flex lg:min-h-[760px]">
-          <div className="min-w-0 flex-1">
-            {workspaceState.tab === "views" ? (
-              <div className="flex h-full min-w-0 flex-col">
-                <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
-                  <Tabs
-                    active={workspaceState.content}
-                    className="mb-0 border-b-0"
-                    onChange={handleContentChange}
-                    tabs={DISPLAY_CONTENTS.map((content) => ({
-                      id: content,
-                      label: DISPLAY_CONTENT_LABELS[content],
-                    }))}
-                  />
-                </div>
+        <div className="space-y-5 px-5 py-5 md:px-6 md:py-6">
+          {workspaceState.tab === "views" ? (
+            <>
+              <PresetSection
+                description="The single canonical public view for each page type. Save custom settings once and they apply anywhere that public page is shared."
+                title="Public"
+              >
+                <ListFrame>
+                  {DISPLAY_CONTENTS.map((content, index) => {
+                    const publicView = publicViewsByContent.get(content) ?? null;
 
-                <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
-                  <div className="grid gap-4 xl:grid-cols-3">
-                    <DisplaySection
-                      active={workspaceState.surface === "public"}
-                      body={publicView ? "Saved public configuration" : "Using defaults until you save"}
-                      ctaLabel="Edit public view"
-                      onSelect={handleSelectPublicSlot}
-                      title="Public"
+                    return (
+                      <PresetRow
+                        active={drawerView?.mode === "public" && drawerView.content === content}
+                        badges={<Badge variant="accent">Canonical</Badge>}
+                        description={
+                          publicView
+                            ? "Saved public settings are currently applied to this page."
+                            : "Using defaults until you save custom settings."
+                        }
+                        isLast={index === DISPLAY_CONTENTS.length - 1}
+                        key={content}
+                        meta={getCanonicalPublicDisplayPath(venueSlug, content)}
+                        onClick={() => openPublicView(content)}
+                        title={DISPLAY_CONTENT_LABELS[content]}
+                      />
+                    );
+                  })}
+                </ListFrame>
+              </PresetSection>
+
+              <PresetSection
+                actionLabel="+ New display"
+                description="Named presets optimized for TVs and signage screens. Each one gets a stable display URL."
+                onAction={() => openDraftView("tv")}
+                title="TV Displays"
+              >
+                <FilterPillBar
+                  activeFilter={tvFilter}
+                  counts={tvContentCounts}
+                  onChange={setTvFilter}
+                />
+                <ListFrame className="mt-4">
+                  {filteredTvViews.length === 0 ? (
+                    <ListEmptyState body={getEmptySavedViewLabel("tv", tvFilter)} />
+                  ) : (
+                    filteredTvViews.map((view, index) => (
+                      <PresetRow
+                        active={drawerView?.mode === "saved" && drawerView.viewId === view.id}
+                        badges={
+                          <>
+                            <Badge variant="info">{DISPLAY_CONTENT_LABELS[view.content]}</Badge>
+                            <Badge variant="success">Saved</Badge>
+                          </>
+                        }
+                        description={`${formatAspect(view.options.aspect)} · ${formatDensity(view.options.density)}`}
+                        isLast={index === filteredTvViews.length - 1 && drawerView?.mode !== "draft"}
+                        key={view.id}
+                        meta={buildSavedDisplayPath(venueSlug, view.slug ?? "", "tv")}
+                        onClick={() => openSavedView(view)}
+                        title={view.name ?? "Untitled display"}
+                      />
+                    ))
+                  )}
+                  {drawerView?.mode === "draft" && drawerView.surface === "tv" && (
+                    <DraftRow
+                      content={drawerView.content}
+                      label="Draft display"
                     />
-                    <DisplayListSection
-                      active={workspaceState.surface === "tv"}
-                      emptyLabel="No TV displays yet."
-                      items={tvViews.map((view) => ({
-                        id: view.id,
-                        label: view.name ?? "Untitled display",
-                        meta: view.slug ? `/${view.slug}` : "Unsaved",
-                      }))}
-                      onCreate={() => handleCreateView("tv")}
-                      onSelect={(viewId) => handleSelectSavedView("tv", viewId)}
-                      selectedId={workspaceState.surface === "tv" && workspaceState.view !== "new" ? workspaceState.view : null}
-                      showDraft={workspaceState.surface === "tv" && workspaceState.view === "new"}
-                      title="TV Displays"
+                  )}
+                </ListFrame>
+              </PresetSection>
+
+              <PresetSection
+                actionLabel="+ New embed"
+                description="Configured views you can drop into any website via iframe. Each embed gets its own stable URL and embed code."
+                onAction={() => openDraftView("embed")}
+                title="Embeds"
+              >
+                <FilterPillBar
+                  activeFilter={embedFilter}
+                  counts={embedContentCounts}
+                  onChange={setEmbedFilter}
+                />
+                <ListFrame className="mt-4">
+                  {filteredEmbedViews.length === 0 ? (
+                    <ListEmptyState body={getEmptySavedViewLabel("embed", embedFilter)} />
+                  ) : (
+                    filteredEmbedViews.map((view, index) => (
+                      <PresetRow
+                        active={drawerView?.mode === "saved" && drawerView.viewId === view.id}
+                        badges={
+                          <>
+                            <Badge variant="info">{DISPLAY_CONTENT_LABELS[view.content]}</Badge>
+                            <Badge variant="success">Saved</Badge>
+                          </>
+                        }
+                        description={`${formatAspect(view.options.aspect)} · ${formatDensity(view.options.density)}`}
+                        isLast={index === filteredEmbedViews.length - 1 && drawerView?.mode !== "draft"}
+                        key={view.id}
+                        meta={buildSavedDisplayPath(venueSlug, view.slug ?? "", "embed")}
+                        onClick={() => openSavedView(view)}
+                        title={view.name ?? "Untitled embed"}
+                      />
+                    ))
+                  )}
+                  {drawerView?.mode === "draft" && drawerView.surface === "embed" && (
+                    <DraftRow
+                      content={drawerView.content}
+                      label="Draft embed"
                     />
-                    <DisplayListSection
-                      active={workspaceState.surface === "embed"}
-                      emptyLabel="No embeds yet."
-                      items={embedViews.map((view) => ({
-                        id: view.id,
-                        label: view.name ?? "Untitled embed",
-                        meta: view.slug ? `/${view.slug}` : "Unsaved",
-                      }))}
-                      onCreate={() => handleCreateView("embed")}
-                      onSelect={(viewId) => handleSelectSavedView("embed", viewId)}
-                      selectedId={workspaceState.surface === "embed" && workspaceState.view !== "new" ? workspaceState.view : null}
-                      showDraft={workspaceState.surface === "embed" && workspaceState.view === "new"}
-                      title="Embeds"
+                  )}
+                </ListFrame>
+              </PresetSection>
+            </>
+          ) : (
+            <>
+              <PresetSection
+                actionLabel="+ New playlist"
+                description="Rotate saved TV display presets into a single loop you can run on larger screens."
+                onAction={() => openDraftPlaylist("tv")}
+                title="TV Playlists"
+              >
+                <ListFrame>
+                  {playlists.filter((playlist) => playlist.surface === "tv").length === 0 ? (
+                    <ListEmptyState body="No TV playlists yet." />
+                  ) : (
+                    playlists
+                      .filter((playlist) => playlist.surface === "tv")
+                      .map((playlist, index, rows) => (
+                        <PresetRow
+                          active={drawerPlaylist?.mode === "saved" && drawerPlaylist.playlistId === playlist.id}
+                          badges={
+                            <>
+                              <Badge variant="info">{formatSlideCount(playlist.config.slides.length)}</Badge>
+                              <Badge variant="success">Saved</Badge>
+                            </>
+                          }
+                          description={`${formatSlideCount(playlist.config.slides.length)} in this rotation.`}
+                          isLast={index === rows.length - 1 && drawerPlaylist?.surface !== "tv"}
+                          key={playlist.id}
+                          meta={buildSavedDisplayPath(venueSlug, playlist.slug, "tv")}
+                          onClick={() => openSavedPlaylist(playlist)}
+                          title={playlist.name}
+                        />
+                      ))
+                  )}
+                  {drawerPlaylist?.mode === "draft" && drawerPlaylist.surface === "tv" && (
+                    <DraftRow label="Draft playlist" />
+                  )}
+                </ListFrame>
+              </PresetSection>
+
+              <PresetSection
+                actionLabel="+ New playlist"
+                description="Rotate saved embed presets with one shared playlist URL for websites or kiosks."
+                onAction={() => openDraftPlaylist("embed")}
+                title="Embed Playlists"
+              >
+                <ListFrame>
+                  {playlists.filter((playlist) => playlist.surface === "embed").length === 0 ? (
+                    <ListEmptyState body="No embed playlists yet." />
+                  ) : (
+                    playlists
+                      .filter((playlist) => playlist.surface === "embed")
+                      .map((playlist, index, rows) => (
+                        <PresetRow
+                          active={drawerPlaylist?.mode === "saved" && drawerPlaylist.playlistId === playlist.id}
+                          badges={
+                            <>
+                              <Badge variant="info">{formatSlideCount(playlist.config.slides.length)}</Badge>
+                              <Badge variant="success">Saved</Badge>
+                            </>
+                          }
+                          description={`${formatSlideCount(playlist.config.slides.length)} in this rotation.`}
+                          isLast={index === rows.length - 1 && drawerPlaylist?.surface !== "embed"}
+                          key={playlist.id}
+                          meta={buildSavedDisplayPath(venueSlug, playlist.slug, "embed")}
+                          onClick={() => openSavedPlaylist(playlist)}
+                          title={playlist.name}
+                        />
+                      ))
+                  )}
+                  {drawerPlaylist?.mode === "draft" && drawerPlaylist.surface === "embed" && (
+                    <DraftRow label="Draft playlist" />
+                  )}
+                </ListFrame>
+              </PresetSection>
+            </>
+          )}
+        </div>
+      </section>
+
+      {workspaceState.drawer && (
+        <DisplayAdminDrawer
+          badges={
+            workspaceState.drawer.kind === "view"
+              ? renderViewDrawerBadges(drawerView, viewFormState.content)
+              : renderPlaylistDrawerBadges(drawerPlaylist)
+          }
+          onClose={closeDrawer}
+          preview={
+            workspaceState.drawer.kind === "view"
+              ? renderViewPreview({
+                  currentPublicUrl,
+                  currentSavedViewUrl,
+                  previewPath: currentViewPreviewPath,
+                  previewUrl: currentViewPreviewUrl,
+                  surface: currentViewSurface,
+                  viewFormState,
+                })
+              : renderPlaylistPreview({
+                  playlistPreviewSlides,
+                  savedPlaylistUrl: currentSavedPlaylistUrl,
+                  surface: drawerPlaylist?.surface ?? "tv",
+                })
+          }
+          title={
+            workspaceState.drawer.kind === "view"
+              ? getViewDrawerTitle(drawerView)
+              : getPlaylistDrawerTitle(drawerPlaylist)
+          }
+        >
+          {workspaceState.drawer.kind === "view" ? (
+            drawerView?.mode === "public" ? (
+              <form action={saveViewAction} className="flex h-full flex-col">
+                <input name="content" type="hidden" value={viewFormState.content} />
+                <input name="surface" type="hidden" value="public" />
+                <input name="view_id" type="hidden" value={viewFormState.viewId ?? ""} />
+                <input
+                  name="config_json"
+                  type="hidden"
+                  value={JSON.stringify(extractDisplayViewOptions(normalizedViewConfig))}
+                />
+
+                <EditorSection title="Public view">
+                  <p className="text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+                    This is the single canonical public configuration for the{" "}
+                    {DISPLAY_CONTENT_LABELS[viewFormState.content].toLowerCase()} page.
+                  </p>
+                </EditorSection>
+
+                <ViewSettingsFields
+                  content={viewFormState.content}
+                  options={viewFormState.options}
+                  setOptions={(updater) =>
+                    setViewFormState((current) => ({ ...current, options: updater(current.options) }))
+                  }
+                  surface="public"
+                />
+                <ViewToggleFields
+                  content={viewFormState.content}
+                  options={viewFormState.options}
+                  setOptions={(updater) =>
+                    setViewFormState((current) => ({ ...current, options: updater(current.options) }))
+                  }
+                  surface="public"
+                />
+
+                <EditorFooter submitLabel="Save public view" />
+              </form>
+            ) : (
+              <form action={saveViewAction} className="flex h-full flex-col">
+                <input name="content" type="hidden" value={viewFormState.content} />
+                <input name="surface" type="hidden" value={drawerView?.surface ?? "tv"} />
+                <input name="view_id" type="hidden" value={viewFormState.viewId ?? ""} />
+                <input
+                  name="config_json"
+                  type="hidden"
+                  value={JSON.stringify(extractDisplayViewOptions(normalizedViewConfig))}
+                />
+
+                <EditorSection title="Identity">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="flex flex-col gap-1 md:col-span-1">
+                      <FieldLabel htmlFor="display-name" required>Name</FieldLabel>
+                      <Input
+                        className="bg-white"
+                        id="display-name"
+                        name="name"
+                        onChange={(event) =>
+                          setViewFormState((current) => ({
+                            ...current,
+                            name: event.target.value,
+                            slug: current.slugDirty ? current.slug : slugify(event.target.value),
+                          }))
+                        }
+                        placeholder={drawerView?.surface === "tv" ? "Main taproom TV" : "Homepage embed"}
+                        required
+                        value={viewFormState.name}
+                      />
+                      <FieldHint>Use a clear name your team will recognize when sharing or sequencing displays.</FieldHint>
+                    </div>
+
+                    <div className="flex flex-col gap-1 md:col-span-1">
+                      <FieldLabel htmlFor="display-slug" required>Slug</FieldLabel>
+                      <Input
+                        className="bg-white"
+                        id="display-slug"
+                        name="slug"
+                        onChange={(event) =>
+                          setViewFormState((current) => ({
+                            ...current,
+                            slug: slugify(event.target.value),
+                            slugDirty: true,
+                          }))
+                        }
+                        placeholder={drawerView?.surface === "tv" ? "main-taproom-tv" : "homepage-events"}
+                        required
+                        value={viewFormState.slug}
+                      />
+                      <FieldHint>The slug becomes part of the stable saved display URL.</FieldHint>
+                    </div>
+
+                    <div className="flex flex-col gap-1 md:col-span-1">
+                      <FieldLabel htmlFor="display-content">Content</FieldLabel>
+                      <Select
+                        className="bg-white"
+                        id="display-content"
+                        name="content_select"
+                        onChange={(event) =>
+                          setViewFormState((current) => ({
+                            ...current,
+                            content: event.target.value as DisplayContent,
+                            options: getDefaultDisplayViewOptions(
+                              drawerView?.surface ?? "tv",
+                              event.target.value as DisplayContent,
+                            ),
+                          }))
+                        }
+                        value={viewFormState.content}
+                      >
+                        {DISPLAY_CONTENTS.map((content) => (
+                          <option key={content} value={content}>
+                            {DISPLAY_CONTENT_LABELS[content]}
+                          </option>
+                        ))}
+                      </Select>
+                      <FieldHint>Set which public page this saved preset should display.</FieldHint>
+                    </div>
+                  </div>
+                </EditorSection>
+
+                <ViewSettingsFields
+                  content={viewFormState.content}
+                  options={viewFormState.options}
+                  setOptions={(updater) =>
+                    setViewFormState((current) => ({ ...current, options: updater(current.options) }))
+                  }
+                  surface={drawerView?.surface ?? "tv"}
+                />
+                <ViewToggleFields
+                  content={viewFormState.content}
+                  options={viewFormState.options}
+                  setOptions={(updater) =>
+                    setViewFormState((current) => ({ ...current, options: updater(current.options) }))
+                  }
+                  surface={drawerView?.surface ?? "tv"}
+                />
+
+                <EditorFooter
+                  deleteAction={viewFormState.mode === "saved" ? deleteViewAction : undefined}
+                  deleteLabel={drawerView?.surface === "embed" ? "Delete embed" : "Delete display"}
+                  submitLabel={getViewSubmitLabel(drawerView?.surface ?? "tv", viewFormState.mode)}
+                />
+              </form>
+            )
+          ) : (
+            <form action={savePlaylistAction} className="flex h-full flex-col">
+              <input name="playlist_id" type="hidden" value={playlistFormState.playlistId ?? ""} />
+              <input name="surface" type="hidden" value={drawerPlaylist?.surface ?? "tv"} />
+              <input name="config_json" type="hidden" value={JSON.stringify(playlistFormState.config)} />
+
+              <EditorSection title="Identity">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel htmlFor="playlist-name" required>Name</FieldLabel>
+                    <Input
+                      className="bg-white"
+                      id="playlist-name"
+                      name="name"
+                      onChange={(event) =>
+                        setPlaylistFormState((current) => ({
+                          ...current,
+                          name: event.target.value,
+                          slug: current.slugDirty ? current.slug : slugify(event.target.value),
+                        }))
+                      }
+                      placeholder="Weekend rotation"
+                      required
+                      value={playlistFormState.name}
                     />
+                    <FieldHint>Use a clear internal name for the rotation your team will load.</FieldHint>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel htmlFor="playlist-slug" required>Slug</FieldLabel>
+                    <Input
+                      className="bg-white"
+                      id="playlist-slug"
+                      name="slug"
+                      onChange={(event) =>
+                        setPlaylistFormState((current) => ({
+                          ...current,
+                          slug: slugify(event.target.value),
+                          slugDirty: true,
+                        }))
+                      }
+                      placeholder="weekend-rotation"
+                      required
+                      value={playlistFormState.slug}
+                    />
+                    <FieldHint>The slug becomes part of the stable playlist URL for this surface.</FieldHint>
                   </div>
                 </div>
+              </EditorSection>
 
-                <div className="flex-1">
-                  {workspaceState.surface === "public" ? (
-                    <form action={saveViewAction} className="flex h-full flex-col">
-                      <input name="content" type="hidden" value={workspaceState.content} />
-                      <input name="surface" type="hidden" value="public" />
-                      <input name="view_id" type="hidden" value={viewFormState.viewId ?? ""} />
-                      <input name="config_json" type="hidden" value={JSON.stringify(extractDisplayViewOptions(normalizedViewConfig))} />
-
-                      <EditorSection title={`${DISPLAY_CONTENT_LABELS[workspaceState.content]} public view`}>
-                        <p className="text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-                          This is the single canonical public configuration for the {DISPLAY_CONTENT_LABELS[workspaceState.content].toLowerCase()} page.
-                        </p>
-                      </EditorSection>
-
-                      <ViewSettingsFields
-                        content={workspaceState.content}
-                        options={viewFormState.options}
-                        setOptions={(updater) => setViewFormState((current) => ({ ...current, options: updater(current.options) }))}
-                        surface="public"
-                      />
-                      <ViewToggleFields
-                        content={workspaceState.content}
-                        options={viewFormState.options}
-                        setOptions={(updater) => setViewFormState((current) => ({ ...current, options: updater(current.options) }))}
-                        surface="public"
-                      />
-
-                      <EditorFooter submitLabel="Save public view" />
-                    </form>
-                  ) : workspaceState.view === "new" || selectedView ? (
-                    <form action={saveViewAction} className="flex h-full flex-col">
-                      <input name="content" type="hidden" value={workspaceState.content} />
-                      <input name="surface" type="hidden" value={workspaceState.surface} />
-                      <input name="view_id" type="hidden" value={viewFormState.viewId ?? ""} />
-                      <input name="config_json" type="hidden" value={JSON.stringify(extractDisplayViewOptions(normalizedViewConfig))} />
-
-                      <EditorSection title={viewFormState.mode === "draft" ? "New display" : "Edit display"}>
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="flex flex-col gap-1">
-                            <FieldLabel htmlFor="display-name" required>Name</FieldLabel>
-                            <Input
-                              className="bg-white"
-                              id="display-name"
-                              name="name"
-                              onChange={(event) =>
-                                setViewFormState((current) => ({
-                                  ...current,
-                                  name: event.target.value,
-                                  slug: current.slugDirty ? current.slug : slugify(event.target.value),
-                                }))
-                              }
-                              placeholder={workspaceState.surface === "tv" ? "Main taproom TV" : "Homepage embed"}
-                              required
-                              value={viewFormState.name}
-                            />
-                            <FieldHint>Use a clear name your team will recognize when building playlists or sharing links.</FieldHint>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <FieldLabel htmlFor="display-slug" required>Slug</FieldLabel>
-                            <Input
-                              className="bg-white"
-                              id="display-slug"
-                              name="slug"
-                              onChange={(event) =>
-                                setViewFormState((current) => ({
-                                  ...current,
-                                  slug: slugify(event.target.value),
-                                  slugDirty: true,
-                                }))
-                              }
-                              placeholder="main-taproom-tv"
-                              required
-                              value={viewFormState.slug}
-                            />
-                            <FieldHint>The slug becomes part of the stable `/display/[slug]` URL for this surface.</FieldHint>
-                          </div>
-                        </div>
-                      </EditorSection>
-
-                      <ViewSettingsFields
-                        content={workspaceState.content}
-                        options={viewFormState.options}
-                        setOptions={(updater) => setViewFormState((current) => ({ ...current, options: updater(current.options) }))}
-                        surface={workspaceState.surface}
-                      />
-                      <ViewToggleFields
-                        content={workspaceState.content}
-                        options={viewFormState.options}
-                        setOptions={(updater) => setViewFormState((current) => ({ ...current, options: updater(current.options) }))}
-                        surface={workspaceState.surface}
-                      />
-
-                      <EditorFooter
-                        deleteAction={viewFormState.mode === "saved" ? deleteViewAction : undefined}
-                        deleteLabel="Delete display"
-                        submitLabel={viewFormState.mode === "draft" ? "Create display" : "Save display"}
-                      />
-                    </form>
+              <EditorSection
+                description={
+                  playlistSurfaceViews.length === 0
+                    ? `Create at least one ${DISPLAY_SURFACE_LABELS[drawerPlaylist?.surface ?? "tv"].toLowerCase()} view before building a playlist.`
+                    : undefined
+                }
+                title="Slides"
+              >
+                <div className="flex flex-col gap-3">
+                  {playlistFormState.config.slides.length === 0 ? (
+                    <div
+                      className="rounded-[18px] border border-dashed border-rim px-4 py-5 text-[13px] leading-relaxed"
+                      style={{ color: "var(--c-muted)", background: "rgba(255,255,255,0.72)" }}
+                    >
+                      Add saved views to build the playlist rotation.
+                    </div>
                   ) : (
-                    <EditorEmptyState
-                      body={`Select a ${DISPLAY_SURFACE_LABELS[workspaceState.surface].toLowerCase()} or create a new one for ${DISPLAY_CONTENT_LABELS[workspaceState.content].toLowerCase()}.`}
-                      title="No display selected"
-                    />
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex h-full min-w-0 flex-col">
-                <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
-                  <Tabs
-                    active={activePlaylistSurface}
-                    className="mb-0 border-b-0"
-                    onChange={handlePlaylistSurfaceChange}
-                    tabs={[
-                      { id: "tv", label: "TV Displays" },
-                      { id: "embed", label: "Embeds" },
-                    ]}
-                  />
-                </div>
-
-                <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
-                  <DisplayListSection
-                    active
-                    emptyLabel={`No ${DISPLAY_SURFACE_LABELS[activePlaylistSurface].toLowerCase()} playlists yet.`}
-                    items={surfacePlaylists.map((playlist) => ({
-                      id: playlist.id,
-                      label: playlist.name,
-                      meta: `/${playlist.slug}`,
-                    }))}
-                    onCreate={handleCreatePlaylist}
-                    onSelect={handleSelectSavedPlaylist}
-                    selectedId={workspaceState.playlist !== "new" ? workspaceState.playlist : null}
-                    showDraft={workspaceState.playlist === "new"}
-                    title={activePlaylistSurface === "tv" ? "TV Playlists" : "Embed Playlists"}
-                  />
-                </div>
-
-                <div className="flex-1">
-                  {workspaceState.playlist === "new" || selectedPlaylist ? (
-                    <form action={savePlaylistAction} className="flex h-full flex-col">
-                      <input name="playlist_id" type="hidden" value={playlistFormState.playlistId ?? ""} />
-                      <input name="surface" type="hidden" value={activePlaylistSurface} />
-                      <input name="config_json" type="hidden" value={JSON.stringify(playlistFormState.config)} />
-
-                      <EditorSection title={playlistFormState.mode === "draft" ? "New playlist" : "Edit playlist"}>
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="flex flex-col gap-1">
-                            <FieldLabel htmlFor="playlist-name" required>Name</FieldLabel>
-                            <Input
-                              className="bg-white"
-                              id="playlist-name"
-                              name="name"
-                              onChange={(event) =>
-                                setPlaylistFormState((current) => ({
-                                  ...current,
-                                  name: event.target.value,
-                                  slug: current.slugDirty ? current.slug : slugify(event.target.value),
-                                }))
-                              }
-                              placeholder="Weekend rotation"
-                              required
-                              value={playlistFormState.name}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <FieldLabel htmlFor="playlist-slug" required>Slug</FieldLabel>
-                            <Input
-                              className="bg-white"
-                              id="playlist-slug"
-                              name="slug"
-                              onChange={(event) =>
-                                setPlaylistFormState((current) => ({
-                                  ...current,
-                                  slug: slugify(event.target.value),
-                                  slugDirty: true,
-                                }))
-                              }
-                              placeholder="weekend-rotation"
-                              required
-                              value={playlistFormState.slug}
-                            />
-                          </div>
-                        </div>
-                      </EditorSection>
-
-                      <EditorSection
-                        description={
-                          activePlaylistViews.length === 0
-                            ? `Create at least one ${DISPLAY_SURFACE_LABELS[activePlaylistSurface].toLowerCase()} view before building a playlist.`
-                            : undefined
-                        }
-                        title="Slides"
+                    playlistFormState.config.slides.map((slide, index) => (
+                      <div
+                        className="grid gap-3 rounded-[18px] border p-4 md:grid-cols-[1.8fr_0.8fr_auto]"
+                        key={`${slide.viewId}-${index}`}
+                        style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.78)" }}
                       >
-                        <div className="flex flex-col gap-3">
-                          {playlistFormState.config.slides.length === 0 ? (
-                            <div className="rounded-[18px] border border-dashed border-rim px-4 py-5 text-[13px] leading-relaxed" style={{ color: "var(--c-muted)", background: "rgba(255,255,255,0.72)" }}>
-                              Add saved views to build the playlist rotation.
-                            </div>
-                          ) : (
-                            playlistFormState.config.slides.map((slide, index) => (
-                              <div
-                                className="grid gap-3 rounded-[18px] border p-4 md:grid-cols-[1.8fr_0.8fr_auto]"
-                                key={`${slide.viewId}-${index}`}
-                                style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.78)" }}
-                              >
-                                <div className="flex flex-col gap-1">
-                                  <FieldLabel htmlFor={`playlist-view-${index}`}>Display view</FieldLabel>
-                                  <Select
-                                    className="bg-white"
-                                    id={`playlist-view-${index}`}
-                                    onChange={(event) =>
-                                      setPlaylistFormState((current) => ({
-                                        ...current,
-                                        config: {
-                                          ...current.config,
-                                          slides: current.config.slides.map((entry, slideIndex) =>
-                                            slideIndex === index
-                                              ? { ...entry, viewId: event.target.value }
-                                              : entry,
-                                          ),
-                                        },
-                                      }))
-                                    }
-                                    value={slide.viewId}
-                                  >
-                                    {activePlaylistViews.length === 0 ? (
-                                      <option value="">No matching display views yet</option>
-                                    ) : (
-                                      activePlaylistViews.map((view) => (
-                                        <option key={view.id} value={view.id}>
-                                          {view.name} · {DISPLAY_CONTENT_LABELS[view.content]}
-                                        </option>
-                                      ))
-                                    )}
-                                  </Select>
-                                </div>
-
-                                <div className="flex flex-col gap-1">
-                                  <FieldLabel htmlFor={`playlist-duration-${index}`}>Seconds</FieldLabel>
-                                  <Input
-                                    className="bg-white"
-                                    id={`playlist-duration-${index}`}
-                                    min={3}
-                                    onChange={(event) =>
-                                      setPlaylistFormState((current) => ({
-                                        ...current,
-                                        config: {
-                                          ...current.config,
-                                          slides: current.config.slides.map((entry, slideIndex) =>
-                                            slideIndex === index
-                                              ? { ...entry, durationSeconds: Number(event.target.value || 12) }
-                                              : entry,
-                                          ),
-                                        },
-                                      }))
-                                    }
-                                    type="number"
-                                    value={slide.durationSeconds}
-                                  />
-                                </div>
-
-                                <div className="flex items-end">
-                                  <Button
-                                    onClick={() =>
-                                      setPlaylistFormState((current) => ({
-                                        ...current,
-                                        config: {
-                                          ...current.config,
-                                          slides: current.config.slides.filter((_, slideIndex) => slideIndex !== index),
-                                        },
-                                      }))
-                                    }
-                                    size="sm"
-                                    type="button"
-                                    variant="ghost"
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-
-                          <div>
-                            <Button
-                              disabled={activePlaylistViews.length === 0}
-                              onClick={() =>
-                                setPlaylistFormState((current) => ({
-                                  ...current,
-                                  config: {
-                                    ...current.config,
-                                    slides: [
-                                      ...current.config.slides,
-                                      {
-                                        durationSeconds: 12,
-                                        transition: "fade",
-                                        viewId: activePlaylistViews[0]?.id ?? "",
-                                      },
-                                    ],
-                                  },
-                                }))
-                              }
-                              size="sm"
-                              type="button"
-                              variant="secondary"
-                            >
-                              Add slide
-                            </Button>
-                          </div>
+                        <div className="flex flex-col gap-1">
+                          <FieldLabel htmlFor={`playlist-view-${index}`}>Display view</FieldLabel>
+                          <Select
+                            className="bg-white"
+                            id={`playlist-view-${index}`}
+                            onChange={(event) =>
+                              setPlaylistFormState((current) => ({
+                                ...current,
+                                config: {
+                                  ...current.config,
+                                  slides: current.config.slides.map((entry, slideIndex) =>
+                                    slideIndex === index
+                                      ? { ...entry, viewId: event.target.value }
+                                      : entry,
+                                  ),
+                                },
+                              }))
+                            }
+                            value={slide.viewId}
+                          >
+                            {playlistSurfaceViews.length === 0 ? (
+                              <option value="">No matching display views yet</option>
+                            ) : (
+                              playlistSurfaceViews.map((view) => (
+                                <option key={view.id} value={view.id}>
+                                  {view.name} · {DISPLAY_CONTENT_LABELS[view.content]}
+                                </option>
+                              ))
+                            )}
+                          </Select>
                         </div>
-                      </EditorSection>
 
-                      <EditorFooter
-                        deleteAction={playlistFormState.mode === "saved" ? deletePlaylistAction : undefined}
-                        deleteLabel="Delete playlist"
-                        submitLabel={playlistFormState.mode === "draft" ? "Create playlist" : "Save playlist"}
-                      />
-                    </form>
-                  ) : (
-                    <EditorEmptyState
-                      body={`Select a ${DISPLAY_SURFACE_LABELS[activePlaylistSurface].toLowerCase()} playlist or create a new one.`}
-                      title="No playlist selected"
-                    />
+                        <div className="flex flex-col gap-1">
+                          <FieldLabel htmlFor={`playlist-duration-${index}`}>Seconds</FieldLabel>
+                          <Input
+                            className="bg-white"
+                            id={`playlist-duration-${index}`}
+                            min={3}
+                            onChange={(event) =>
+                              setPlaylistFormState((current) => ({
+                                ...current,
+                                config: {
+                                  ...current.config,
+                                  slides: current.config.slides.map((entry, slideIndex) =>
+                                    slideIndex === index
+                                      ? { ...entry, durationSeconds: Number(event.target.value || 12) }
+                                      : entry,
+                                  ),
+                                },
+                              }))
+                            }
+                            type="number"
+                            value={slide.durationSeconds}
+                          />
+                        </div>
+
+                        <div className="flex items-end">
+                          <Button
+                            onClick={() =>
+                              setPlaylistFormState((current) => ({
+                                ...current,
+                                config: {
+                                  ...current.config,
+                                  slides: current.config.slides.filter((_, slideIndex) => slideIndex !== index),
+                                },
+                              }))
+                            }
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))
                   )}
+
+                  <div>
+                    <Button
+                      disabled={playlistSurfaceViews.length === 0}
+                      onClick={() =>
+                        setPlaylistFormState((current) => ({
+                          ...current,
+                          config: {
+                            ...current.config,
+                            slides: [
+                              ...current.config.slides,
+                              {
+                                durationSeconds: 12,
+                                transition: "fade",
+                                viewId: playlistSurfaceViews[0]?.id ?? "",
+                              },
+                            ],
+                          },
+                        }))
+                      }
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                    >
+                      Add slide
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              </EditorSection>
 
-          <div
-            aria-hidden="true"
-            className="hidden w-3 shrink-0 cursor-col-resize border-l border-r bg-[rgba(255,255,255,0.8)] lg:block"
-            onPointerDown={() => setIsResizing(true)}
-            style={{ borderColor: "var(--c-border)" }}
-          />
-
-          <aside
-            className="hidden shrink-0 lg:block"
-            style={{
-              background: "linear-gradient(180deg, rgba(250,247,243,0.96), rgba(255,255,255,0.98))",
-              borderLeft: "1px solid var(--c-border)",
-              width: previewWidth,
-            }}
-          >
-            {previewContent}
-          </aside>
-        </div>
-
-        <div
-          className="border-t lg:hidden"
-          style={{
-            background: "linear-gradient(180deg, rgba(250,247,243,0.96), rgba(255,255,255,0.98))",
-            borderColor: "var(--c-border)",
-          }}
-        >
-          {previewContent}
-        </div>
-      </div>
-    </section>
+              <EditorFooter
+                deleteAction={playlistFormState.mode === "saved" ? deletePlaylistAction : undefined}
+                deleteLabel="Delete playlist"
+                submitLabel={playlistFormState.mode === "draft" ? "Create playlist" : "Save playlist"}
+              />
+            </form>
+          )}
+        </DisplayAdminDrawer>
+      )}
+    </>
   );
 }
 
 function getInitialViewFormState({
-  content,
+  drawer,
   publicView,
   selectedView,
-  surface,
-  viewToken,
 }: {
-  content: DisplayContent;
+  drawer: DisplayViewDrawerState | null;
   publicView: DisplayViewRecord | null;
   selectedView: DisplayViewRecord | null;
-  surface: DisplayWorkspaceState["surface"];
-  viewToken: DisplaySelectionToken;
 }): ViewFormState {
-  if (surface === "public") {
+  if (!drawer) {
     return {
+      content: "menu",
+      mode: "empty",
+      name: "",
+      options: getDefaultDisplayViewOptions("public", "menu"),
+      slug: "",
+      slugDirty: false,
+      viewId: null,
+    };
+  }
+
+  if (drawer.mode === "public") {
+    return {
+      content: drawer.content,
       mode: "public",
       name: "",
-      options: publicView?.options ?? getDefaultDisplayViewOptions("public", content),
+      options: publicView?.options ?? getDefaultDisplayViewOptions("public", drawer.content),
       slug: "",
       slugDirty: false,
       viewId: publicView?.id ?? null,
     };
   }
 
-  if (viewToken === "new") {
+  if (drawer.mode === "draft") {
     return {
+      content: drawer.content,
       mode: "draft",
       name: "",
-      options: getDefaultDisplayViewOptions(surface, content),
+      options: getDefaultDisplayViewOptions(drawer.surface, drawer.content),
       slug: "",
       slugDirty: false,
       viewId: null,
@@ -872,6 +986,7 @@ function getInitialViewFormState({
 
   if (selectedView) {
     return {
+      content: selectedView.content,
       mode: "saved",
       name: selectedView.name ?? "",
       options: selectedView.options,
@@ -882,9 +997,10 @@ function getInitialViewFormState({
   }
 
   return {
+    content: drawer.content,
     mode: "empty",
     name: "",
-    options: getDefaultDisplayViewOptions(surface, content),
+    options: getDefaultDisplayViewOptions(drawer.surface, drawer.content),
     slug: "",
     slugDirty: false,
     viewId: null,
@@ -893,9 +1009,20 @@ function getInitialViewFormState({
 
 function getInitialPlaylistFormState(
   selectedPlaylist: DisplayPlaylistRecord | null,
-  playlistToken: DisplaySelectionToken,
+  drawer: DisplayPlaylistDrawerState | null,
 ): PlaylistFormState {
-  if (playlistToken === "new") {
+  if (!drawer) {
+    return {
+      config: { slides: [] },
+      mode: "empty",
+      name: "",
+      playlistId: null,
+      slug: "",
+      slugDirty: false,
+    };
+  }
+
+  if (drawer.mode === "draft") {
     return {
       config: { slides: [] },
       mode: "draft",
@@ -927,6 +1054,357 @@ function getInitialPlaylistFormState(
   };
 }
 
+function filterSavedViews(views: DisplayViewRecord[], filter: DisplayContentFilter) {
+  return filter === "all" ? views : views.filter((view) => view.content === filter);
+}
+
+function countViewsByContent(views: DisplayViewRecord[]) {
+  return DISPLAY_CONTENTS.reduce(
+    (counts, content) => ({
+      ...counts,
+      [content]: views.filter((view) => view.content === content).length,
+    }),
+    {} as Record<DisplayContent, number>,
+  );
+}
+
+function formatAspect(aspect: DisplayViewOptions["aspect"]) {
+  switch (aspect) {
+    case "landscape":
+      return "Landscape";
+    case "portrait":
+      return "Portrait";
+    default:
+      return "Auto";
+  }
+}
+
+function formatDensity(density: DisplayDensity) {
+  return density === "compact" ? "Compact" : "Comfortable";
+}
+
+function formatSlideCount(slideCount: number) {
+  return slideCount === 1 ? "1 slide" : `${slideCount} slides`;
+}
+
+function getFilterLabel(filter: DisplayContentFilter) {
+  return filter === "all" ? "All" : DISPLAY_CONTENT_LABELS[filter];
+}
+
+function getEmptySavedViewLabel(surface: SavedDisplaySurface, filter: DisplayContentFilter) {
+  if (filter === "all") {
+    return surface === "tv" ? "No TV displays yet." : "No embeds yet.";
+  }
+
+  return `No ${DISPLAY_CONTENT_LABELS[filter].toLowerCase()} ${surface === "tv" ? "displays" : "embeds"} yet.`;
+}
+
+function getViewDrawerTitle(drawer: DisplayViewDrawerState | null) {
+  if (!drawer) {
+    return "Display";
+  }
+
+  if (drawer.mode === "public") {
+    return `Edit ${DISPLAY_CONTENT_LABELS[drawer.content]} public view`;
+  }
+
+  if (drawer.mode === "draft") {
+    return drawer.surface === "embed" ? "New embed" : "New display";
+  }
+
+  return drawer.surface === "embed" ? "Edit embed" : "Edit display";
+}
+
+function getPlaylistDrawerTitle(drawer: DisplayPlaylistDrawerState | null) {
+  if (!drawer) {
+    return "Playlist";
+  }
+
+  return drawer.mode === "draft" ? "New playlist" : "Edit playlist";
+}
+
+function getViewSubmitLabel(surface: SavedDisplaySurface, mode: ViewFormMode) {
+  if (mode === "draft") {
+    return surface === "embed" ? "Create embed" : "Create display";
+  }
+
+  return surface === "embed" ? "Save embed" : "Save display";
+}
+
+function renderViewDrawerBadges(drawer: DisplayViewDrawerState | null, content: DisplayContent) {
+  if (!drawer) {
+    return null;
+  }
+
+  return (
+    <>
+      <Badge variant={drawer.mode === "draft" ? "warning" : drawer.mode === "saved" ? "success" : "accent"}>
+        {drawer.mode === "draft" ? "Draft" : drawer.mode === "saved" ? "Saved" : "Canonical"}
+      </Badge>
+      <Badge variant="info">{drawer.surface === "public" ? "Public" : SAVED_SURFACE_TITLES[drawer.surface]}</Badge>
+      <Badge>{DISPLAY_CONTENT_LABELS[content]}</Badge>
+    </>
+  );
+}
+
+function renderPlaylistDrawerBadges(drawer: DisplayPlaylistDrawerState | null) {
+  if (!drawer) {
+    return null;
+  }
+
+  return (
+    <>
+      <Badge variant={drawer.mode === "draft" ? "warning" : "success"}>
+        {drawer.mode === "draft" ? "Draft" : "Saved"}
+      </Badge>
+      <Badge variant="info">{SAVED_SURFACE_TITLES[drawer.surface]}</Badge>
+    </>
+  );
+}
+
+function PresetSection({
+  actionLabel,
+  children,
+  description,
+  onAction,
+  title,
+}: {
+  actionLabel?: string;
+  children: ReactNode;
+  description: string;
+  onAction?: () => void;
+  title: string;
+}) {
+  return (
+    <section
+      className="rounded-[24px] border p-4 md:p-5"
+      style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.8)" }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[15px] font-semibold" style={{ color: "var(--c-text)" }}>
+            {title}
+          </div>
+          <p className="mt-2 max-w-[760px] text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+            {description}
+          </p>
+        </div>
+        {actionLabel && onAction && (
+          <Button onClick={onAction} size="sm" type="button" variant="secondary">
+            {actionLabel}
+          </Button>
+        )}
+      </div>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function FilterPillBar({
+  activeFilter,
+  counts,
+  onChange,
+}: {
+  activeFilter: DisplayContentFilter;
+  counts: Record<DisplayContent, number>;
+  onChange: (filter: DisplayContentFilter) => void;
+}) {
+  const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {FILTERS.map((filter) => {
+        const count = filter === "all" ? totalCount : counts[filter];
+
+        return (
+          <button
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
+              activeFilter === filter
+                ? "border-ember bg-ember/10 text-ember"
+                : "border-rim bg-white text-[var(--c-text)] hover:border-ember/50",
+            )}
+            key={filter}
+            onClick={() => onChange(filter)}
+            type="button"
+          >
+            <span>{getFilterLabel(filter)}</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0 text-[10px] font-semibold",
+                activeFilter === filter ? "bg-ember-light text-ember-dark" : "bg-[var(--c-bg2)] text-[var(--c-muted)]",
+              )}
+            >
+              {count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ListFrame({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn("overflow-hidden rounded-[18px] border", className)}
+      style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.72)" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PresetRow({
+  active,
+  badges,
+  description,
+  isLast,
+  meta,
+  onClick,
+  title,
+}: {
+  active?: boolean;
+  badges?: ReactNode;
+  description?: string;
+  isLast?: boolean;
+  meta: string;
+  onClick: () => void;
+  title: string;
+}) {
+  return (
+    <button
+      className={cn(
+        "w-full px-4 py-4 text-left transition-colors",
+        !isLast && "border-b",
+        active ? "bg-ember/5" : "bg-transparent hover:bg-[rgba(255,255,255,0.86)]",
+      )}
+      onClick={onClick}
+      style={{ borderColor: "var(--c-border)" }}
+      type="button"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
+            {title}
+          </div>
+          <div className="mt-1 font-mono text-[11.5px]" style={{ color: "var(--c-muted)" }}>
+            {meta}
+          </div>
+          {description && (
+            <div className="mt-2 text-[12.5px]" style={{ color: "var(--c-muted)" }}>
+              {description}
+            </div>
+          )}
+        </div>
+        {badges && <div className="flex shrink-0 flex-wrap justify-end gap-2">{badges}</div>}
+      </div>
+    </button>
+  );
+}
+
+function DraftRow({
+  content,
+  label,
+}: {
+  content?: DisplayContent;
+  label: string;
+}) {
+  return (
+    <div
+      className="border-t border-dashed px-4 py-4"
+      style={{ borderColor: "var(--accent)", background: "rgba(255,255,255,0.86)" }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[14px] font-semibold" style={{ color: "var(--accent)" }}>
+            {label}
+          </div>
+          <div className="mt-2 text-[12.5px]" style={{ color: "var(--c-muted)" }}>
+            Fill out the drawer to save a stable preset.
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {content && <Badge>{DISPLAY_CONTENT_LABELS[content]}</Badge>}
+          <Badge variant="warning">Draft</Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ListEmptyState({ body }: { body: string }) {
+  return (
+    <div className="px-4 py-5 text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+      {body}
+    </div>
+  );
+}
+
+function DisplayAdminDrawer({
+  badges,
+  children,
+  onClose,
+  preview,
+  title,
+}: {
+  badges?: ReactNode;
+  children: ReactNode;
+  onClose: () => void;
+  preview: ReactNode;
+  title: string;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.28)]"
+      onClick={onClose}
+    >
+      <div className="flex h-full w-full justify-end">
+        <div
+          aria-label={title}
+          aria-modal="true"
+          className="flex h-full w-full flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(247,244,240,0.99))] shadow-[0_28px_80px_rgba(15,23,42,0.24)] lg:max-w-[1140px]"
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
+        >
+          <div className="border-b px-5 py-4 md:px-6" style={{ borderColor: "var(--c-border)" }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: "var(--c-text)" }}>
+                  {title}
+                </div>
+                {badges && <div className="mt-3 flex flex-wrap gap-2">{badges}</div>}
+              </div>
+              <Button onClick={onClose} size="sm" type="button" variant="secondary">
+                Close
+              </Button>
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 lg:flex">
+            <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+            <aside
+              className="min-h-0 w-full shrink-0 overflow-y-auto border-t lg:w-[420px] lg:border-l lg:border-t-0 xl:w-[460px]"
+              style={{
+                background: "linear-gradient(180deg, rgba(250,247,243,0.96), rgba(255,255,255,0.98))",
+                borderColor: "var(--c-border)",
+              }}
+            >
+              {preview}
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ViewSettingsFields({
   content,
   options,
@@ -936,7 +1414,7 @@ function ViewSettingsFields({
   content: DisplayContent;
   options: DisplayViewOptions;
   setOptions: (updater: (current: DisplayViewOptions) => DisplayViewOptions) => void;
-  surface: DisplayWorkspaceState["surface"];
+  surface: DisplayViewDrawerState["surface"];
 }) {
   return (
     <EditorSection title="Display settings">
@@ -955,6 +1433,7 @@ function ViewSettingsFields({
             <option value="compact">Compact</option>
           </Select>
         </div>
+
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor="display-aspect">Aspect</FieldLabel>
           <Select
@@ -970,13 +1449,17 @@ function ViewSettingsFields({
             <option value="portrait">Portrait</option>
           </Select>
         </div>
+
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor="display-link-target">Link target</FieldLabel>
           <Select
             className="bg-white"
             id="display-link-target"
             onChange={(event) =>
-              setOptions((current) => ({ ...current, linkTarget: event.target.value as DisplayViewOptions["linkTarget"] }))
+              setOptions((current) => ({
+                ...current,
+                linkTarget: event.target.value as DisplayViewOptions["linkTarget"],
+              }))
             }
             value={options.linkTarget}
           >
@@ -985,7 +1468,7 @@ function ViewSettingsFields({
           </Select>
           <FieldHint>
             {surface === "embed"
-              ? "Embed displays keep the host page open by default."
+              ? "Embed presets keep the host page open by default."
               : `Settings stay locked to ${DISPLAY_CONTENT_LABELS[content].toLowerCase()} on the ${DISPLAY_SURFACE_LABELS[surface].toLowerCase()} surface.`}
           </FieldHint>
         </div>
@@ -1003,13 +1486,16 @@ function ViewToggleFields({
   content: DisplayContent;
   options: DisplayViewOptions;
   setOptions: (updater: (current: DisplayViewOptions) => DisplayViewOptions) => void;
-  surface: DisplayWorkspaceState["surface"];
+  surface: DisplayViewDrawerState["surface"];
 }) {
   const normalized = hydrateDisplayViewConfig(options, content, surface);
 
   return (
     <EditorSection title="Display controls">
-      <div className="overflow-hidden rounded-[20px] border" style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.74)" }}>
+      <div
+        className="overflow-hidden rounded-[20px] border"
+        style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.74)" }}
+      >
         <div className="grid md:grid-cols-2">
           {BOOLEAN_FIELDS.map((field, index) => {
             const disabled =
@@ -1020,11 +1506,7 @@ function ViewToggleFields({
 
             return (
               <div
-                className={cn(
-                  "px-4 py-4",
-                  needsLeftBorder && "md:border-l",
-                  needsTopBorder && "border-t",
-                )}
+                className={cn("px-4 py-4", needsLeftBorder && "md:border-l", needsTopBorder && "border-t")}
                 key={field.key}
                 style={{
                   borderColor: "var(--c-border)",
@@ -1064,7 +1546,6 @@ function renderViewPreview({
   currentPublicUrl,
   currentSavedViewUrl,
   previewPath,
-  previewScale,
   previewUrl,
   surface,
   viewFormState,
@@ -1072,38 +1553,35 @@ function renderViewPreview({
   currentPublicUrl: string;
   currentSavedViewUrl: string | null;
   previewPath: string;
-  previewScale: number;
   previewUrl: string;
-  surface: DisplayWorkspaceState["surface"];
+  surface: DisplayViewDrawerState["surface"];
   viewFormState: ViewFormState;
 }) {
-  const embedSnippet = surface === "embed"
-    ? `<iframe src="${currentSavedViewUrl ?? previewUrl}" width="100%" height="720" style="border:0;" loading="lazy"></iframe>`
-    : null;
+  const previewScale = surface === "tv" ? 0.5 : surface === "embed" ? 0.6 : 0.58;
+  const embedSnippet =
+    surface === "embed" && currentSavedViewUrl
+      ? `<iframe src="${currentSavedViewUrl}" width="100%" height="720" style="border:0;" loading="lazy"></iframe>`
+      : null;
 
   return (
     <>
       <PreviewSection title="Live preview">
-        {viewFormState.mode === "empty" ? (
-          <PreviewEmptyState body="Select a display or create a new one to load the preview." />
-        ) : (
-          <div className="overflow-hidden rounded-[20px] border border-rim bg-white shadow-[0_16px_32px_rgba(15,23,42,0.08)]">
-            <div className="relative h-[420px] overflow-hidden bg-white">
-              <iframe
-                className="absolute inset-0 border-0"
-                src={previewPath}
-                style={{
-                  height: `${100 / previewScale}%`,
-                  pointerEvents: "none",
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: "top left",
-                  width: `${100 / previewScale}%`,
-                }}
-                title="Display preview"
-              />
-            </div>
+        <div className="overflow-hidden rounded-[20px] border border-rim bg-white shadow-[0_16px_32px_rgba(15,23,42,0.08)]">
+          <div className="relative h-[420px] overflow-hidden bg-white">
+            <iframe
+              className="absolute inset-0 border-0"
+              src={previewPath}
+              style={{
+                height: `${100 / previewScale}%`,
+                pointerEvents: "none",
+                transform: `scale(${previewScale})`,
+                transformOrigin: "top left",
+                width: `${100 / previewScale}%`,
+              }}
+              title="Display preview"
+            />
           </div>
-        )}
+        </div>
       </PreviewSection>
 
       <PreviewSection title="Share & embed">
@@ -1117,8 +1595,12 @@ function renderViewPreview({
             )}
           </div>
         ) : (
-          <div className="rounded-[18px] border px-4 py-3 text-[12.5px] leading-relaxed" style={{ borderColor: "var(--c-border)", color: "var(--c-muted)", background: "rgba(255,255,255,0.76)" }}>
-            Save this display to generate a stable URL{surface === "embed" ? " and iframe snippet" : ""}.
+          <div
+            className="rounded-[18px] border px-4 py-3 text-[12.5px] leading-relaxed"
+            style={{ borderColor: "var(--c-border)", color: "var(--c-muted)", background: "rgba(255,255,255,0.76)" }}
+          >
+            Save this {surface === "embed" ? "embed" : "display"} to generate a stable URL
+            {surface === "embed" ? " and iframe snippet" : ""}.
           </div>
         )}
 
@@ -1133,147 +1615,43 @@ function renderViewPreview({
 }
 
 function renderPlaylistPreview({
-  activePlaylistSurface,
-  playlistFormState,
   playlistPreviewSlides,
   savedPlaylistUrl,
+  surface,
 }: {
-  activePlaylistSurface: SavedDisplaySurface;
-  playlistFormState: PlaylistFormState;
   playlistPreviewSlides: Array<{ durationSeconds: number; src: string; title: string }>;
   savedPlaylistUrl: string | null;
+  surface: SavedDisplaySurface;
 }) {
   const embedSnippet =
-    activePlaylistSurface === "embed" && savedPlaylistUrl
+    surface === "embed" && savedPlaylistUrl
       ? `<iframe src="${savedPlaylistUrl}" width="100%" height="720" style="border:0;" loading="lazy"></iframe>`
       : null;
 
   return (
     <>
       <PreviewSection title="Live preview">
-        {playlistFormState.mode === "empty" ? (
-          <PreviewEmptyState body="Select a playlist or create a new one to load the preview." />
-        ) : (
-          <DisplayPlaylistPlayer className="h-[420px] min-h-0 rounded-[20px] border border-rim" slides={playlistPreviewSlides} />
-        )}
+        <DisplayPlaylistPlayer className="h-[420px] min-h-0 rounded-[20px] border border-rim" slides={playlistPreviewSlides} />
       </PreviewSection>
 
       <PreviewSection title="Share & embed">
         {savedPlaylistUrl ? (
           <div className="flex flex-col gap-4">
             <DisplayLinkField label="Stable playlist URL" value={savedPlaylistUrl} />
-            {activePlaylistSurface === "embed" && embedSnippet && (
+            {surface === "embed" && embedSnippet && (
               <DisplayLinkField copyLabel="Copy iframe" label="Embed iframe" multiline value={embedSnippet} />
             )}
           </div>
         ) : (
-          <div className="rounded-[18px] border px-4 py-3 text-[12.5px] leading-relaxed" style={{ borderColor: "var(--c-border)", color: "var(--c-muted)", background: "rgba(255,255,255,0.76)" }}>
-            Save this playlist to generate a stable URL{activePlaylistSurface === "embed" ? " and iframe snippet" : ""}.
+          <div
+            className="rounded-[18px] border px-4 py-3 text-[12.5px] leading-relaxed"
+            style={{ borderColor: "var(--c-border)", color: "var(--c-muted)", background: "rgba(255,255,255,0.76)" }}
+          >
+            Save this playlist to generate a stable URL{surface === "embed" ? " and iframe snippet" : ""}.
           </div>
         )}
       </PreviewSection>
     </>
-  );
-}
-
-function DisplaySection({
-  active,
-  body,
-  ctaLabel,
-  onSelect,
-  title,
-}: {
-  active?: boolean;
-  body: string;
-  ctaLabel: string;
-  onSelect: () => void;
-  title: string;
-}) {
-  return (
-    <section className="rounded-[20px] border p-4" style={{ borderColor: active ? "var(--accent)" : "var(--c-border)", background: active ? "color-mix(in srgb, var(--accent) 7%, white)" : "rgba(255,255,255,0.88)" }}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--c-muted)" }}>
-          {title}
-        </div>
-        {active && (
-          <div className="rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: "var(--accent)", color: "var(--accent)", background: "white" }}>
-            Active
-          </div>
-        )}
-      </div>
-      <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-        {body}
-      </p>
-      <Button className="mt-4" onClick={onSelect} size="sm" type="button" variant="secondary">
-        {ctaLabel}
-      </Button>
-    </section>
-  );
-}
-
-function DisplayListSection({
-  active,
-  emptyLabel,
-  items,
-  onCreate,
-  onSelect,
-  selectedId,
-  showDraft,
-  title,
-}: {
-  active?: boolean;
-  emptyLabel: string;
-  items: Array<{ id: string; label: string; meta: string }>;
-  onCreate: () => void;
-  onSelect: (id: string) => void;
-  selectedId: string | null;
-  showDraft?: boolean;
-  title: string;
-}) {
-  return (
-    <section className="rounded-[20px] border p-4" style={{ borderColor: active ? "var(--accent)" : "var(--c-border)", background: active ? "color-mix(in srgb, var(--accent) 7%, white)" : "rgba(255,255,255,0.88)" }}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--c-muted)" }}>
-          {title}
-        </div>
-        <Button onClick={onCreate} size="sm" type="button" variant="secondary">
-          + New
-        </Button>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2">
-        {items.length === 0 ? (
-          <div className="rounded-[16px] border border-dashed border-rim px-4 py-4 text-[13px]" style={{ color: "var(--c-muted)" }}>
-            {emptyLabel}
-          </div>
-        ) : (
-          items.map((item) => (
-            <button
-              className={cn(
-                "rounded-[16px] border px-4 py-3 text-left transition-colors",
-                selectedId === item.id ? "border-ember bg-ember/5" : "border-rim bg-white hover:border-ember/50",
-              )}
-              key={item.id}
-              onClick={() => onSelect(item.id)}
-              type="button"
-            >
-              <div className="text-[14px] font-semibold" style={{ color: "var(--c-text)" }}>
-                {item.label}
-              </div>
-              <div className="mt-1 font-mono text-[11px]" style={{ color: "var(--c-muted)" }}>
-                {item.meta}
-              </div>
-            </button>
-          ))
-        )}
-
-        {showDraft && (
-          <div className="rounded-[16px] border border-dashed px-4 py-3 text-[13px]" style={{ borderColor: "var(--accent)", color: "var(--accent)", background: "rgba(255,255,255,0.9)" }}>
-            Draft in progress
-          </div>
-        )}
-      </div>
-    </section>
   );
 }
 
@@ -1329,27 +1707,6 @@ function EditorFooter({
   );
 }
 
-function EditorEmptyState({
-  body,
-  title,
-}: {
-  body: string;
-  title: string;
-}) {
-  return (
-    <div className="flex h-full items-center justify-center px-6 py-14">
-      <div className="max-w-md rounded-[22px] border border-dashed border-rim bg-white/70 px-6 py-8 text-center">
-        <div className="text-[16px] font-semibold" style={{ color: "var(--c-text)" }}>
-          {title}
-        </div>
-        <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-          {body}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function PreviewSection({
   children,
   title,
@@ -1366,14 +1723,6 @@ function PreviewSection({
         <div className="h-px flex-1" style={{ background: "var(--c-border)" }} />
       </div>
       <div className="mt-4">{children}</div>
-    </div>
-  );
-}
-
-function PreviewEmptyState({ body }: { body: string }) {
-  return (
-    <div className="flex min-h-[420px] items-center justify-center rounded-[20px] border border-dashed border-rim bg-white/70 px-6 text-center text-[13px]" style={{ color: "var(--c-muted)" }}>
-      {body}
     </div>
   );
 }

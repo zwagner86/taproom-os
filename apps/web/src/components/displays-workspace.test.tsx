@@ -62,7 +62,7 @@ const tvPlaylist: DisplayPlaylistRecord = {
 };
 
 describe("displays workspace", () => {
-  it("renders the views IA with the public slot selected by default", () => {
+  it("renders the list-first views layout with fixed public cards", () => {
     const markup = renderToStaticMarkup(
       createElement(DisplaysWorkspace, {
         appUrl: "https://taproom.example",
@@ -82,11 +82,19 @@ describe("displays workspace", () => {
     expect(markup).toContain("Public");
     expect(markup).toContain("TV Displays");
     expect(markup).toContain("Embeds");
-    expect(markup).toContain("Canonical public URL");
+    expect(markup).toContain("Full Menu");
+    expect(markup).toContain("Drinks");
+    expect(markup).toContain("Food");
+    expect(markup).toContain("Events");
+    expect(markup).toContain("Memberships");
+    expect(markup).toContain("+ New display");
+    expect(markup).toContain("+ New embed");
+    expect(markup).toContain("All");
+    expect(markup).not.toContain("Canonical public URL");
     expect(markup).not.toContain("Delete display");
   });
 
-  it("renders a selected saved TV display with locked content context", () => {
+  it("renders a selected saved TV display inside the drawer with content metadata", () => {
     const markup = renderToStaticMarkup(
       createElement(DisplaysWorkspace, {
         appUrl: "https://taproom.example",
@@ -111,10 +119,38 @@ describe("displays workspace", () => {
     expect(markup).toContain("Delete display");
     expect(markup).toContain("Stable display URL");
     expect(markup).toContain("/tap-list-tv");
-    expect(markup).not.toContain("Content");
+    expect(markup).toContain("Content");
+    expect(markup).toContain("Saved");
+    expect(markup).toContain("Live preview");
   });
 
-  it("renders playlist editing with same-surface view choices", () => {
+  it("renders a draft embed drawer from query-backed draft state", () => {
+    const markup = renderToStaticMarkup(
+      createElement(DisplaysWorkspace, {
+        appUrl: "https://taproom.example",
+        deletePlaylistAction: async () => {},
+        deleteViewAction: async () => {},
+        initialSearchParams: {
+          content: "events",
+          surface: "embed",
+          tab: "views",
+          view: "new",
+        },
+        playlists: [tvPlaylist],
+        savePlaylistAction: async () => {},
+        saveViewAction: async () => {},
+        venueSlug: "demo-taproom",
+        views: [publicMenuView, tvDrinksView, embedEventsView],
+      }),
+    );
+
+    expect(markup).toContain("New embed");
+    expect(markup).toContain("Draft");
+    expect(markup).toContain("Create embed");
+    expect(markup).toContain("Events");
+  });
+
+  it("renders playlist editing in the same drawer pattern with stacked sections", () => {
     const markup = renderToStaticMarkup(
       createElement(DisplaysWorkspace, {
         appUrl: "https://taproom.example",
@@ -134,10 +170,11 @@ describe("displays workspace", () => {
     );
 
     expect(markup).toContain("TV Playlists");
+    expect(markup).toContain("Embed Playlists");
     expect(markup).toContain("Edit playlist");
     expect(markup).toContain("Weekend rotation");
     expect(markup).toContain("Tap list TV");
-    expect(markup).toContain("Drinks");
     expect(markup).toContain("Stable playlist URL");
+    expect(markup).toContain("Slides");
   });
 });

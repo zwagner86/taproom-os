@@ -3,46 +3,76 @@ import {
   displaySurfaceSchema,
   savedDisplaySurfaceSchema,
   type DisplayContent,
-  type DisplaySurface,
   type SavedDisplaySurface,
 } from "@/lib/displays";
 
-export const DEFAULT_DISPLAY_PREVIEW_WIDTH = 420;
-export const MIN_DISPLAY_PREVIEW_WIDTH = 320;
-export const MAX_DISPLAY_PREVIEW_WIDTH = 720;
-export const DISPLAY_PREVIEW_WIDTH_STORAGE_KEY = "taproom.display.preview-width";
-
 export type DisplayAdminTab = "views" | "playlists";
-export type DisplaySelectionToken = string | "new" | null;
+export type DisplaySelectionToken = string | "new";
+export type DisplayContentFilter = DisplayContent | "all";
+
+export type DisplayViewDrawerState =
+  | {
+      content: DisplayContent;
+      kind: "view";
+      mode: "public";
+      surface: "public";
+      viewId: string | null;
+    }
+  | {
+      content: DisplayContent;
+      kind: "view";
+      mode: "draft";
+      surface: SavedDisplaySurface;
+      viewId: null;
+    }
+  | {
+      content: DisplayContent;
+      kind: "view";
+      mode: "saved";
+      surface: SavedDisplaySurface;
+      viewId: string;
+    };
+
+export type DisplayPlaylistDrawerState =
+  | {
+      kind: "playlist";
+      mode: "draft";
+      playlistId: null;
+      surface: SavedDisplaySurface;
+    }
+  | {
+      kind: "playlist";
+      mode: "saved";
+      playlistId: string;
+      surface: SavedDisplaySurface;
+    };
+
+export type DisplayDrawerState = DisplayPlaylistDrawerState | DisplayViewDrawerState;
 
 export type DisplayWorkspaceState = {
-  content: DisplayContent;
-  playlist: DisplaySelectionToken;
-  surface: DisplaySurface;
+  drawer: DisplayDrawerState | null;
   tab: DisplayAdminTab;
-  view: DisplaySelectionToken;
 };
 
-export function clampDisplayPreviewWidth(width: number) {
-  return Math.max(MIN_DISPLAY_PREVIEW_WIDTH, Math.min(MAX_DISPLAY_PREVIEW_WIDTH, Math.round(width)));
+export function getDraftDisplayContent(filter: DisplayContentFilter): DisplayContent {
+  return filter === "all" ? "menu" : filter;
 }
 
 export function normalizeDisplayWorkspaceState(
   searchParams: Record<string, string | string[] | undefined>,
 ): DisplayWorkspaceState {
   const tab = searchParams.tab === "playlists" ? "playlists" : "views";
-  const content = parseContent(searchParams.content) ?? "menu";
-  const requestedSurface = parseSurface(searchParams.surface);
-  const surface = tab === "playlists"
-    ? (parseSavedSurface(searchParams.surface) ?? "tv")
-    : (requestedSurface ?? "public");
+
+  if (tab === "playlists") {
+    return {
+      drawer: normalizePlaylistDrawerState(searchParams),
+      tab,
+    };
+  }
 
   return {
-    content,
-    playlist: normalizeSelectionToken(searchParams.playlist),
-    surface,
+    drawer: normalizeViewDrawerState(searchParams),
     tab,
-    view: normalizeSelectionToken(searchParams.view),
   };
 }
 
@@ -50,22 +80,94 @@ export function serializeDisplayWorkspaceState(state: DisplayWorkspaceState) {
   const params = new URLSearchParams();
 
   params.set("tab", state.tab);
-  params.set("surface", state.surface);
 
-  if (state.tab === "views") {
-    params.set("content", state.content);
+  if (!state.drawer) {
+    return params.toString();
+  }
 
-    if (state.surface !== "public" && state.view) {
-      params.set("view", state.view);
+  if (state.drawer.kind === "view") {
+    params.set("content", state.drawer.content);
+    params.set("surface", state.drawer.surface);
+
+    if (state.drawer.surface !== "public") {
+      params.set("view", state.drawer.mode === "draft" ? "new" : state.drawer.viewId);
     }
-  } else if (state.playlist) {
-    params.set("playlist", state.playlist);
+  } else {
+    params.set("surface", state.drawer.surface);
+    params.set("playlist", state.drawer.mode === "draft" ? "new" : state.drawer.playlistId);
   }
 
   return params.toString();
 }
 
-function normalizeSelectionToken(value: string | string[] | undefined): DisplaySelectionToken {
+function normalizePlaylistDrawerState(
+  searchParams: Record<string, string | string[] | undefined>,
+): DisplayPlaylistDrawerState | null {
+  const surface = parseSavedSurface(searchParams.surface);
+  const playlist = normalizeSelectionToken(searchParams.playlist);
+
+  if (!surface || !playlist) {
+    return null;
+  }
+
+  return playlist === "new"
+    ? {
+        kind: "playlist",
+        mode: "draft",
+        playlistId: null,
+        surface,
+      }
+    : {
+        kind: "playlist",
+        mode: "saved",
+        playlistId: playlist,
+        surface,
+      };
+}
+
+function normalizeViewDrawerState(
+  searchParams: Record<string, string | string[] | undefined>,
+): DisplayViewDrawerState | null {
+  const surface = parseSurface(searchParams.surface);
+  const content = parseContent(searchParams.content);
+  const view = normalizeSelectionToken(searchParams.view);
+
+  if (surface === "public") {
+    if (!content) {
+      return null;
+    }
+
+    return {
+      content,
+      kind: "view",
+      mode: "public",
+      surface,
+      viewId: null,
+    };
+  }
+
+  if (!surface || !view) {
+    return null;
+  }
+
+  return view === "new"
+    ? {
+        content: content ?? "menu",
+        kind: "view",
+        mode: "draft",
+        surface,
+        viewId: null,
+      }
+    : {
+        content: content ?? "menu",
+        kind: "view",
+        mode: "saved",
+        surface,
+        viewId: view,
+      };
+}
+
+function normalizeSelectionToken(value: string | string[] | undefined): DisplaySelectionToken | null {
   const normalized = Array.isArray(value) ? value[0] : value;
 
   if (!normalized) {

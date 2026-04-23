@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 
 import { getEnv } from "@/env";
 
-export function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -26,7 +26,22 @@ export function updateSession(request: NextRequest) {
     },
   });
 
-  void supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch (error) {
+    if (!isSupabaseAuthRateLimitError(error)) {
+      console.error("Supabase auth refresh failed in middleware", error);
+    }
+  }
 
   return response;
+}
+
+function isSupabaseAuthRateLimitError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const maybeError = error as { code?: unknown; status?: unknown };
+  return maybeError.status === 429 || maybeError.code === "over_request_rate_limit";
 }

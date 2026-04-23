@@ -1,11 +1,25 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
+import { isAuthSensitivePathname } from "@/lib/auth-middleware";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export function proxy(request: NextRequest) {
+  if (!isAuthSensitivePathname(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   return updateSession(request);
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/",
+    "/login",
+    "/logout",
+    "/onboarding",
+    "/signup",
+    "/app/:path*",
+    "/auth/:path*",
+    "/internal/:path*",
+  ],
 };

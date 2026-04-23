@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 export const dynamic = "force-dynamic";
 
 import { AppShell } from "@/components/app-shell";
-import { requireUser } from "@/server/auth";
 import { requireVenueAccess } from "@/server/repositories/venues";
 
 export default async function VenueLayout({
@@ -14,10 +13,8 @@ export default async function VenueLayout({
   params: Promise<{ venue: string }>;
 }) {
   const { venue } = await params;
-  const [{ venue: venueRecord }, user] = await Promise.all([
-    requireVenueAccess(venue),
-    requireUser(),
-  ]);
+  const access = await requireVenueAccess(venue);
+  const { user, venue: venueRecord } = access;
 
   const emailParts = ((user.email ?? "").split("@")[0] ?? "").split(".");
   const initials = emailParts

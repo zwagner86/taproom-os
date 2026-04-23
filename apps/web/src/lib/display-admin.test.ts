@@ -1,24 +1,55 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  clampDisplayPreviewWidth,
-  DEFAULT_DISPLAY_PREVIEW_WIDTH,
+  getDraftDisplayContent,
   normalizeDisplayWorkspaceState,
   serializeDisplayWorkspaceState,
 } from "./display-admin";
 
 describe("display admin helpers", () => {
-  it("defaults workspace state to public views", () => {
+  it("defaults workspace state to the views tab with no open drawer", () => {
     expect(normalizeDisplayWorkspaceState({})).toEqual({
-      content: "menu",
-      playlist: null,
-      surface: "public",
+      drawer: null,
       tab: "views",
-      view: null,
     });
   });
 
-  it("normalizes playlist state to saved surfaces only", () => {
+  it("normalizes public, saved, and playlist drawer states from query params", () => {
+    expect(
+      normalizeDisplayWorkspaceState({
+        content: "food",
+        surface: "public",
+        tab: "views",
+      }),
+    ).toEqual({
+      drawer: {
+        content: "food",
+        kind: "view",
+        mode: "public",
+        surface: "public",
+        viewId: null,
+      },
+      tab: "views",
+    });
+
+    expect(
+      normalizeDisplayWorkspaceState({
+        content: "drinks",
+        surface: "tv",
+        tab: "views",
+        view: "view-1",
+      }),
+    ).toEqual({
+      drawer: {
+        content: "drinks",
+        kind: "view",
+        mode: "saved",
+        surface: "tv",
+        viewId: "view-1",
+      },
+      tab: "views",
+    });
+
     expect(
       normalizeDisplayWorkspaceState({
         playlist: "playlist-1",
@@ -26,39 +57,52 @@ describe("display admin helpers", () => {
         tab: "playlists",
       }),
     ).toEqual({
-      content: "menu",
-      playlist: "playlist-1",
-      surface: "embed",
+      drawer: {
+        kind: "playlist",
+        mode: "saved",
+        playlistId: "playlist-1",
+        surface: "embed",
+      },
       tab: "playlists",
-      view: null,
     });
   });
 
-  it("serializes only the relevant selection params", () => {
+  it("serializes only the active drawer selection", () => {
     expect(
       serializeDisplayWorkspaceState({
-        content: "drinks",
-        playlist: null,
-        surface: "tv",
+        drawer: null,
         tab: "views",
-        view: "new",
       }),
-    ).toBe("tab=views&surface=tv&content=drinks&view=new");
+    ).toBe("tab=views");
 
     expect(
       serializeDisplayWorkspaceState({
-        content: "menu",
-        playlist: "playlist-7",
-        surface: "embed",
+        drawer: {
+          content: "drinks",
+          kind: "view",
+          mode: "draft",
+          surface: "tv",
+          viewId: null,
+        },
+        tab: "views",
+      }),
+    ).toBe("tab=views&content=drinks&surface=tv&view=new");
+
+    expect(
+      serializeDisplayWorkspaceState({
+        drawer: {
+          kind: "playlist",
+          mode: "saved",
+          playlistId: "playlist-7",
+          surface: "embed",
+        },
         tab: "playlists",
-        view: null,
       }),
     ).toBe("tab=playlists&surface=embed&playlist=playlist-7");
   });
 
-  it("clamps preview widths to the supported range", () => {
-    expect(clampDisplayPreviewWidth(DEFAULT_DISPLAY_PREVIEW_WIDTH)).toBe(DEFAULT_DISPLAY_PREVIEW_WIDTH);
-    expect(clampDisplayPreviewWidth(200)).toBe(320);
-    expect(clampDisplayPreviewWidth(1000)).toBe(720);
+  it("seeds draft content from the active filter", () => {
+    expect(getDraftDisplayContent("all")).toBe("menu");
+    expect(getDraftDisplayContent("events")).toBe("events");
   });
 });

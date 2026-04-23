@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { isPlatformAdmin, requireUser } from "@/server/auth";
+import { getOptionalUser, isPlatformAdmin } from "@/server/auth";
 
 export type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
 export type VenueUserRow = Database["public"]["Tables"]["venue_users"]["Row"];
@@ -66,30 +66,43 @@ export async function getVenueBySlug(slug: string) {
 }
 
 export async function requireVenueAccess(slug: string) {
-  const user = await requireUser();
-  const venue = await getVenueBySlug(slug);
+  const [user, venue, admin] = await Promise.all([
+    getOptionalUser(),
+    getVenueBySlug(slug),
+    isPlatformAdmin(),
+  ]);
+
+  if (!user) {
+    redirect("/login");
+  }
 
   if (!venue) {
     redirect("/");
   }
 
-  const supabase = await createServerSupabaseClient();
-  const [admin, membershipResponse] = await Promise.all([
-    isPlatformAdmin(),
-    supabase
-      .from("venue_users")
-      .select("*")
-      .eq("venue_id", venue.id)
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
+  if (admin) {
+    return {
+      isPlatformAdmin: true,
+      membership: null,
+      user,
+      venue,
+    };
+  }
 
-  if (!admin && !membershipResponse.data) {
+  const supabase = await createServerSupabaseClient();
+  const membershipResponse = await supabase
+    .from("venue_users")
+    .select("*")
+    .eq("venue_id", venue.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!membershipResponse.data) {
     redirect("/");
   }
 
   return {
-    isPlatformAdmin: admin,
+    isPlatformAdmin: false,
     membership: membershipResponse.data,
     user,
     venue,
