@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isDemoVenueId } from "@/lib/demo-venue";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { getPaymentsProvider } from "@/server/providers";
 import {
@@ -40,6 +41,11 @@ export async function POST(request: Request) {
 
   const accountId = typeof event.account === "string" ? event.account : null;
   const connection = accountId ? await getStripeConnectionByAccountIdAdmin(accountId) : null;
+
+  if (isDemoVenueId(connection?.venue_id)) {
+    return NextResponse.json({ ignored: true, received: true });
+  }
+
   const webhookEvent = await recordProviderWebhookEventAdmin({
     eventType: event.type,
     payload: JSON.parse(payload),

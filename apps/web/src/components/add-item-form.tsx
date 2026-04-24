@@ -9,8 +9,10 @@ import type { ItemFormState } from "@/server/actions/items";
 
 export function AddItemForm({
   action,
+  disabled = false,
 }: {
   action: (prevState: ItemFormState, formData: FormData) => Promise<ItemFormState>;
+  disabled?: boolean;
 }) {
   const [state, formAction] = useActionState(action, null);
   const [formKey, setFormKey] = useState(0);
@@ -23,7 +25,7 @@ export function AddItemForm({
     <>
       {state?.message && <Alert variant="success" className="mb-4">{state.message}</Alert>}
       {state?.error && <Alert variant="error" className="mb-4">{state.error}</Alert>}
-      <ItemTypeForm key={formKey} action={formAction} />
+      <ItemTypeForm key={formKey} action={formAction} disabled={disabled} />
     </>
   );
 }

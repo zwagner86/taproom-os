@@ -119,6 +119,7 @@ describe("venue access", () => {
 
     expect(access.user.id).toBe("user-1");
     expect(access.venue.id).toBe("venue-1");
+    expect(access.isDemoVenue).toBe(true);
     expect(access.isPlatformAdmin).toBe(false);
     expect(access.membership?.id).toBe("membership-1");
     expect(authGetUser).toHaveBeenCalledTimes(1);

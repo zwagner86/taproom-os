@@ -1164,12 +1164,14 @@ function renderPlaylistDrawerBadges(drawer: DisplayPlaylistDrawerState | null) {
 
 function PresetSection({
   actionLabel,
+  actionDisabled = false,
   children,
   description,
   onAction,
   title,
 }: {
   actionLabel?: string;
+  actionDisabled?: boolean;
   children: ReactNode;
   description: string;
   onAction?: () => void;
@@ -1190,7 +1192,7 @@ function PresetSection({
           </p>
         </div>
         {actionLabel && onAction && (
-          <Button onClick={onAction} size="sm" type="button" variant="secondary">
+          <Button disabled={actionDisabled} onClick={onAction} size="sm" type="button" variant="secondary">
             {actionLabel}
           </Button>
         )}

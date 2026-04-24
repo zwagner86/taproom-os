@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
+import { isDemoVenueRecord } from "@/lib/demo-venue";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getOptionalUser, isPlatformAdmin } from "@/server/auth";
 
@@ -82,6 +83,7 @@ export async function requireVenueAccess(slug: string) {
 
   if (admin) {
     return {
+      isDemoVenue: isDemoVenueRecord(venue),
       isPlatformAdmin: true,
       membership: null,
       user,
@@ -102,6 +104,7 @@ export async function requireVenueAccess(slug: string) {
   }
 
   return {
+    isDemoVenue: isDemoVenueRecord(venue),
     isPlatformAdmin: false,
     membership: membershipResponse.data,
     user,

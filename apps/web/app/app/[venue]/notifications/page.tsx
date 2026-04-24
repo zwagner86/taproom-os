@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { Alert, Badge, Button, Card, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@/components/ui";
 
+import { DemoVenueNotificationsPage } from "@/components/demo-venue-notifications-page";
 import { sendBroadcastAction } from "@/server/actions/notifications";
 import { listVenueNotificationLogs } from "@/server/repositories/notifications";
 import { requireVenueAccess } from "@/server/repositories/venues";
@@ -18,6 +19,16 @@ export default async function VenueNotificationsPage({
   const [{ error, message }, logs] = await Promise.all([searchParams, listVenueNotificationLogs(access.venue.id)]);
   const action = sendBroadcastAction.bind(null, venue);
 
+  if (access.isDemoVenue) {
+    return (
+      <DemoVenueNotificationsPage
+        initialError={error}
+        initialLogs={logs}
+        initialVenue={access.venue}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader subtitle="Broadcast announcements to your followers." title="Notifications" />
@@ -31,65 +42,67 @@ export default async function VenueNotificationsPage({
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New broadcast</div>
 
           <form action={action} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <FieldLabel
-                htmlFor="broadcast-channel"
-                info="Email sends to followers who opted into email. SMS sends to followers who provided a phone number and opted into text updates."
+            <fieldset className="contents" disabled={access.isDemoVenue}>
+              <div className="flex flex-col gap-1">
+                <FieldLabel
+                  htmlFor="broadcast-channel"
+                  info="Email sends to followers who opted into email. SMS sends to followers who provided a phone number and opted into text updates."
+                >
+                  Channel
+                </FieldLabel>
+                <Select aria-describedby="broadcast-channel-hint" defaultValue="email" id="broadcast-channel" name="channel">
+                  <option value="email">✉️ Email</option>
+                  <option value="sms">📱 SMS</option>
+                </Select>
+                <FieldHint id="broadcast-channel-hint">
+                  Choose which group of opted-in followers should receive this broadcast.
+                </FieldHint>
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel
+                  htmlFor="broadcast-subject"
+                  info="Subject lines are only used for email sends. SMS broadcasts ignore this field."
+                >
+                  Subject (email only)
+                </FieldLabel>
+                <Input
+                  aria-describedby="broadcast-subject-hint"
+                  id="broadcast-subject"
+                  name="subject"
+                  placeholder={`${access.venue.name} update`}
+                />
+                <FieldHint id="broadcast-subject-hint">
+                  Keep it short so email recipients can understand the update at a glance.
+                </FieldHint>
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel
+                  htmlFor="broadcast-body"
+                  info="Write the full message you want followers to receive. Keep SMS sends shorter, because long text messages may be split by carriers."
+                  required
+                >
+                  Message
+                </FieldLabel>
+                <Textarea
+                  aria-describedby="broadcast-body-hint"
+                  id="broadcast-body"
+                  name="body"
+                  placeholder="What should fans know?"
+                  required
+                  rows={4}
+                />
+                <FieldHint id="broadcast-body-hint">
+                  This message is sent as-is to all active followers for the selected channel.
+                </FieldHint>
+              </div>
+              <div
+                className="rounded-lg px-3 py-2.5 text-[12px] leading-relaxed"
+                style={{ background: "var(--c-bg2)", color: "var(--c-muted)" }}
               >
-                Channel
-              </FieldLabel>
-              <Select aria-describedby="broadcast-channel-hint" defaultValue="email" id="broadcast-channel" name="channel">
-                <option value="email">✉️ Email</option>
-                <option value="sms">📱 SMS</option>
-              </Select>
-              <FieldHint id="broadcast-channel-hint">
-                Choose which group of opted-in followers should receive this broadcast.
-              </FieldHint>
-            </div>
-            <div className="flex flex-col gap-1">
-              <FieldLabel
-                htmlFor="broadcast-subject"
-                info="Subject lines are only used for email sends. SMS broadcasts ignore this field."
-              >
-                Subject (email only)
-              </FieldLabel>
-              <Input
-                aria-describedby="broadcast-subject-hint"
-                id="broadcast-subject"
-                name="subject"
-                placeholder={`${access.venue.name} update`}
-              />
-              <FieldHint id="broadcast-subject-hint">
-                Keep it short so email recipients can understand the update at a glance.
-              </FieldHint>
-            </div>
-            <div className="flex flex-col gap-1">
-              <FieldLabel
-                htmlFor="broadcast-body"
-                info="Write the full message you want followers to receive. Keep SMS sends shorter, because long text messages may be split by carriers."
-                required
-              >
-                Message
-              </FieldLabel>
-              <Textarea
-                aria-describedby="broadcast-body-hint"
-                id="broadcast-body"
-                name="body"
-                placeholder="What should fans know?"
-                required
-                rows={4}
-              />
-              <FieldHint id="broadcast-body-hint">
-                This message is sent as-is to all active followers for the selected channel.
-              </FieldHint>
-            </div>
-            <div
-              className="rounded-lg px-3 py-2.5 text-[12px] leading-relaxed"
-              style={{ background: "var(--c-bg2)", color: "var(--c-muted)" }}
-            >
-              Sending to all active followers for this channel.
-            </div>
-            <Button className="w-full" type="submit">Send broadcast</Button>
+                Sending to all active followers for this channel.
+              </div>
+              <Button className="w-full" type="submit">Send broadcast</Button>
+            </fieldset>
           </form>
         </Card>
 

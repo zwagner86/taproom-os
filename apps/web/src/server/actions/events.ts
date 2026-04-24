@@ -6,9 +6,11 @@ import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
 import { getEnv } from "@/env";
+import { isDemoVenueId, isDemoVenueRecord } from "@/lib/demo-venue";
 import { getPaidEventGateCopy, getRefundGateCopy } from "@/lib/venue-payment-capability";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
+import { redirectForDemoVenue } from "@/server/demo-venue";
 import { getPaymentsProvider } from "@/server/providers";
 import {
   createCheckInEventAdmin,
@@ -36,6 +38,11 @@ type EventUpdate = Database["public"]["Tables"]["events"]["Update"];
 
 export async function createEventAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/events`);
+  }
+
   const capability = await getVenuePaymentCapability(access.venue.id);
   const { payload, warning } = buildCreateEventPayload(access.venue.id, formData, capability.canSellPaidEvents);
 
@@ -52,6 +59,11 @@ export async function createEventAction(venueSlug: string, formData: FormData) {
 
 export async function updateEventAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/events`);
+  }
+
   const eventId = String(formData.get("event_id") ?? "");
   const existing = await getVenueEventById(access.venue.id, eventId);
   const capability = await getVenuePaymentCapability(access.venue.id);
@@ -214,6 +226,11 @@ export async function createPaidEventCheckoutAction(venueSlug: string, eventSlug
 
 export async function createCheckInSessionAction(venueSlug: string, eventId: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/events/${eventId}/check-in`);
+  }
+
   const existing = await getCheckInSessionForEvent(access.venue.id, eventId);
 
   if (existing) {
@@ -239,6 +256,11 @@ export async function createCheckInSessionAction(venueSlug: string, eventId: str
 
 export async function adjustCheckInAction(venueSlug: string, eventId: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/events/${eventId}/check-in`);
+  }
+
   const bookingId = String(formData.get("booking_id") ?? "");
   const delta = parseDelta(formData.get("delta"));
   const booking = await getEventBookingById(access.venue.id, bookingId);
@@ -277,6 +299,10 @@ export async function adjustCheckInWithTokenAction(token: string, formData: Form
     redirect(`/check-in/${token}?error=${encodeURIComponent("PIN does not match.")}`);
   }
 
+  if (isDemoVenueId(session.venue_id)) {
+    redirectForDemoVenue(`/check-in/${token}`);
+  }
+
   const booking = await getEventBookingByIdAdmin(String(formData.get("booking_id") ?? ""));
 
   if (!booking || booking.event_id !== session.event_id) {
@@ -303,6 +329,11 @@ export async function adjustCheckInWithTokenAction(token: string, formData: Form
 
 export async function refundEventBookingAction(venueSlug: string, bookingId: string) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/billing`);
+  }
+
   const capability = await getVenuePaymentCapability(access.venue.id);
   const booking = await getEventBookingById(access.venue.id, bookingId);
   const connection = await getStripeConnectionForVenue(access.venue.id);
@@ -398,6 +429,10 @@ async function getPublicEventOrRedirect(venueSlug: string, eventSlug: string) {
 
   if (!event || !venue) {
     redirect(`/v/${venueSlug}/events?error=${encodeURIComponent("Event not found.")}`);
+  }
+
+  if (isDemoVenueRecord(venue)) {
+    redirectForDemoVenue(`/v/${venueSlug}/events/${eventSlug}`);
   }
 
   return { event, venue };

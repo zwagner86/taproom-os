@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
-import { AppShell } from "@/components/app-shell";
+import { VenueAdminShell } from "@/components/venue-admin-shell";
 import { requireVenueAccess } from "@/server/repositories/venues";
 
 export default async function VenueLayout({
@@ -41,15 +41,15 @@ export default async function VenueLayout({
   ];
 
   return (
-    <AppShell
+    <VenueAdminShell
+      currentUserId={user.id}
+      demoMode={access.isDemoVenue}
       groups={groups}
       userInitials={initials || "JD"}
       userLabel={user.email ?? "Venue Admin"}
-      venueName={venueRecord.name}
-      venueSlug={venueRecord.slug}
-      venueType={venueRecord.venue_type}
+      venue={venueRecord}
     >
       {children}
-    </AppShell>
+    </VenueAdminShell>
   );
 }

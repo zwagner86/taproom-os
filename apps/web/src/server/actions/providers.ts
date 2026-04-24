@@ -4,12 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { redirectForDemoVenue } from "@/server/demo-venue";
 import { getCatalogProvider, getPaymentsProvider } from "@/server/providers";
 import { listVenueItems } from "@/server/repositories/items";
 import { requireVenueAccess } from "@/server/repositories/venues";
 
 export async function startStripeConnectAction(venueSlug: string) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/billing`);
+  }
+
   const response = await getPaymentsProvider().getConnectUrl({
     returnUrl: `/app/${venueSlug}/billing`,
     venueId: access.venue.id,
@@ -21,6 +27,11 @@ export async function startStripeConnectAction(venueSlug: string) {
 
 export async function startSquareConnectAction(venueSlug: string) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/integrations/square`);
+  }
+
   const response = await getCatalogProvider().getConnectUrl({
     returnUrl: `/app/${venueSlug}/integrations/square`,
     venueId: access.venue.id,
@@ -32,6 +43,11 @@ export async function startSquareConnectAction(venueSlug: string) {
 
 export async function linkSquareItemAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/integrations/square`);
+  }
+
   const supabase = await createServerSupabaseClient();
   const itemId = String(formData.get("item_id") ?? "");
   const externalId = String(formData.get("external_id") ?? "").trim();
@@ -78,6 +94,11 @@ export async function linkSquareItemAction(venueSlug: string, formData: FormData
 
 export async function syncSquareItemsAction(venueSlug: string) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/integrations/square`);
+  }
+
   const supabase = await createServerSupabaseClient();
   const items = await listVenueItems(access.venue.id);
   const linkedItems = items

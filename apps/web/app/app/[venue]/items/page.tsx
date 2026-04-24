@@ -5,6 +5,7 @@ import { Alert, Badge, Button, Card, DataTable, EmptyState, PageHeader } from "@
 import { Beer } from "lucide-react";
 
 import { AddItemForm } from "@/components/add-item-form";
+import { DemoVenueItemsPage } from "@/components/demo-venue-items-page";
 import { ItemActiveToggle } from "@/components/item-active-toggle";
 import { createItemAction, deleteItemAction, toggleItemActiveAction } from "@/server/actions/items";
 import { listVenueItems } from "@/server/repositories/items";
@@ -21,12 +22,17 @@ export default async function VenueItemsPage({
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const { venue } = await params;
-  const [{ venue: venueRecord }, { error, message }] = await Promise.all([
+  const [access, { error, message }] = await Promise.all([
     requireVenueAccess(venue),
     searchParams,
   ]);
+  const { venue: venueRecord } = access;
   const items = await listVenueItems(venueRecord.id);
   const activeCount = items.filter((i) => i.active).length;
+
+  if (access.isDemoVenue) {
+    return <DemoVenueItemsPage initialItems={items} initialVenue={venueRecord} />;
+  }
 
   const createAction = createItemAction.bind(null, venue);
   const deleteAction = deleteItemAction.bind(null, venue);
@@ -92,10 +98,16 @@ export default async function VenueItemsPage({
                 const toggleAction = toggleItemActiveAction.bind(null, venue, item.id);
                 return (
                   <div className="flex items-center gap-2">
-                    <ItemActiveToggle active={item.active} action={toggleAction} />
+                    <ItemActiveToggle active={item.active} action={toggleAction} disabled={access.isDemoVenue} />
                     <form action={deleteAction}>
                       <input name="item_id" type="hidden" value={item.id} />
-                      <Button size="sm" type="submit" variant="ghost" style={{ color: "var(--c-muted)" }}>
+                      <Button
+                        disabled={access.isDemoVenue}
+                        size="sm"
+                        type="submit"
+                        variant="ghost"
+                        style={{ color: "var(--c-muted)" }}
+                      >
                         Del
                       </Button>
                     </form>
@@ -118,7 +130,7 @@ export default async function VenueItemsPage({
 
       <Card>
         <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Add item</div>
-        <AddItemForm action={createAction} />
+        <AddItemForm action={createAction} disabled={access.isDemoVenue} />
       </Card>
     </div>
   );

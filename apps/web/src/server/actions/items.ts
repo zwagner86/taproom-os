@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getDemoVenueFormState, redirectForDemoVenue } from "@/server/demo-venue";
 
 type ItemInsert = Database["public"]["Tables"]["items"]["Insert"];
 type ItemUpdate = Database["public"]["Tables"]["items"]["Update"];
@@ -17,6 +18,11 @@ export async function createItemAction(
   formData: FormData,
 ): Promise<ItemFormState> {
   const access = await getVenueAccessOrRedirect(venueSlug);
+
+  if (access.isDemoVenue) {
+    return getDemoVenueFormState<ItemFormState>();
+  }
+
   const supabase = await createServerSupabaseClient();
 
   const payload: ItemInsert = {
@@ -44,6 +50,11 @@ export async function createItemAction(
 
 export async function updateItemAction(venueSlug: string, formData: FormData) {
   const access = await getVenueAccessOrRedirect(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/items`);
+  }
+
   const supabase = await createServerSupabaseClient();
   const itemId = String(formData.get("item_id") ?? "");
 
@@ -70,6 +81,11 @@ export async function updateItemAction(venueSlug: string, formData: FormData) {
 
 export async function toggleItemActiveAction(venueSlug: string, itemId: string, active: boolean): Promise<void> {
   const access = await getVenueAccessOrRedirect(venueSlug);
+
+  if (access.isDemoVenue) {
+    return;
+  }
+
   const supabase = await createServerSupabaseClient();
   await supabase.from("items").update({ active }).eq("id", itemId).eq("venue_id", access.venue.id);
   revalidateVenueContent(venueSlug);
@@ -77,6 +93,11 @@ export async function toggleItemActiveAction(venueSlug: string, itemId: string, 
 
 export async function deleteItemAction(venueSlug: string, formData: FormData) {
   const access = await getVenueAccessOrRedirect(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/items`);
+  }
+
   const supabase = await createServerSupabaseClient();
   const itemId = String(formData.get("item_id") ?? "");
 
@@ -128,4 +149,3 @@ function revalidateVenueContent(venueSlug: string) {
   revalidatePath(`/embed/${venueSlug}/menu`);
   revalidatePath(`/tv/${venueSlug}`);
 }
-

@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { isDemoVenueRecord } from "@/lib/demo-venue";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
+import { redirectForDemoVenue, withDemoVenueNotice } from "@/server/demo-venue";
 import { sendBroadcast, sendEmailFirstNotification } from "@/server/services/notifications";
 import { upsertFollowerAdmin } from "@/server/repositories/followers";
 import { getVenueBySlug, requireVenueAccess } from "@/server/repositories/venues";
@@ -13,6 +15,10 @@ export async function createFollowerAction(venueSlug: string, returnPath: string
 
   if (!venue) {
     redirect(`${returnPath}?error=${encodeURIComponent("Venue not found.")}`);
+  }
+
+  if (isDemoVenueRecord(venue)) {
+    redirect(withDemoVenueNotice(returnPath));
   }
 
   const email = normalizeOptionalString(formData.get("email"));
@@ -58,6 +64,11 @@ export async function createFollowerAction(venueSlug: string, returnPath: string
 
 export async function sendBroadcastAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/notifications`);
+  }
+
   const channel = String(formData.get("channel") ?? "email") as "email" | "sms";
   const subject = normalizeOptionalString(formData.get("subject"));
   const body = String(formData.get("body") ?? "").trim();

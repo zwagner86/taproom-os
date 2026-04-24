@@ -8,6 +8,7 @@ import { normalizeHexColor } from "@/lib/colors";
 import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 import { isPlatformAdmin, requireUser } from "@/server/auth";
+import { getDemoVenueFormState } from "@/server/demo-venue";
 import { getVenueBySlug } from "@/server/repositories/venues";
 
 type VenueInsert = Database["public"]["Tables"]["venues"]["Insert"];
@@ -136,6 +137,11 @@ export async function updateVenueSettingsAction(
   formData: FormData,
 ): Promise<VenueSettingsState> {
   const access = await getVenueAccessOrRedirect(venueSlug);
+
+  if (access.isDemoVenue) {
+    return getDemoVenueFormState<VenueSettingsState>();
+  }
+
   const supabase = await createServerSupabaseClient();
   const accentColor = normalizeHexColor(String(formData.get("accent_color") ?? access.venue.accent_color));
 
@@ -150,6 +156,7 @@ export async function updateVenueSettingsAction(
     menu_label: String(formData.get("menu_label") ?? access.venue.menu_label).trim() || "Tap List",
     name: String(formData.get("name") ?? access.venue.name).trim(),
     tagline: normalizeOptionalString(formData.get("tagline")),
+    venue_type: String(formData.get("venue_type") ?? access.venue.venue_type) as VenueInsert["venue_type"],
   };
 
   const { error } = await supabase.from("venues").update(updates).eq("id", access.venue.id);

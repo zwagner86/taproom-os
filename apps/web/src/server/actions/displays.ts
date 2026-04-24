@@ -17,6 +17,7 @@ import {
   type SavedDisplaySurface,
 } from "@/lib/displays";
 import { slugify } from "@/lib/utils";
+import { redirectForDemoVenue } from "@/server/demo-venue";
 import {
   createDisplayPlaylistAdmin,
   deleteDisplayPlaylistAdmin,
@@ -37,8 +38,13 @@ import {
 import { requireVenueAccess } from "@/server/repositories/venues";
 
 export async function saveDisplayViewAction(venueSlug: string, formData: FormData) {
+  const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/displays`);
+  }
+
   try {
-    const access = await requireVenueAccess(venueSlug);
     const viewId = normalizeOptionalString(formData.get("view_id"));
     const content = displayContentSchema.parse(String(formData.get("content") ?? "menu"));
     const surface = displaySurfaceSchema.parse(String(formData.get("surface") ?? "public"));
@@ -154,8 +160,13 @@ export async function saveDisplayViewAction(venueSlug: string, formData: FormDat
 }
 
 export async function deleteDisplayViewAction(venueSlug: string, formData: FormData) {
+  const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/displays`);
+  }
+
   try {
-    const access = await requireVenueAccess(venueSlug);
     const viewId = String(formData.get("view_id") ?? "");
 
     if (!viewId) {
@@ -210,8 +221,13 @@ export async function deleteDisplayViewAction(venueSlug: string, formData: FormD
 }
 
 export async function saveDisplayPlaylistAction(venueSlug: string, formData: FormData) {
+  const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/displays`);
+  }
+
   try {
-    const access = await requireVenueAccess(venueSlug);
     const playlistId = normalizeOptionalString(formData.get("playlist_id"));
     const surface = savedDisplaySurfaceSchema.parse(String(formData.get("surface") ?? "tv"));
     const name = String(formData.get("name") ?? "").trim();
@@ -292,8 +308,13 @@ export async function saveDisplayPlaylistAction(venueSlug: string, formData: For
 }
 
 export async function deleteDisplayPlaylistAction(venueSlug: string, formData: FormData) {
+  const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/displays`);
+  }
+
   try {
-    const access = await requireVenueAccess(venueSlug);
     const playlistId = String(formData.get("playlist_id") ?? "");
 
     if (!playlistId) {

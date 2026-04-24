@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { DEMO_VENUE_ID } from "@/lib/demo-venue";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
+import { DEMO_MODE_MESSAGE } from "@/server/demo-venue";
 import { getPaymentsProvider } from "@/server/providers";
 import { upsertStripeConnectionAdmin } from "@/server/repositories/providers";
 
@@ -13,6 +15,12 @@ export async function GET(request: Request) {
 
   if (!venueId) {
     return NextResponse.redirect(new URL("/?error=Missing%20venue%20state", request.url));
+  }
+
+  if (venueId === DEMO_VENUE_ID) {
+    return NextResponse.redirect(
+      new URL(`/app/demo-taproom/billing?error=${encodeURIComponent(DEMO_MODE_MESSAGE)}`, request.url),
+    );
   }
 
   const { data: venue } = await supabase.from("venues").select("slug").eq("id", venueId).maybeSingle();

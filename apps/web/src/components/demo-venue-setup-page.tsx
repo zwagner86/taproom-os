@@ -1,30 +1,62 @@
 "use client";
 
-import { useActionState } from "react";
+import { useMemo, useState } from "react";
 
-import { Alert, Button, Card, FieldHint, FieldLabel, Input, Select } from "@/components/ui";
-
+import { DemoMutationAlert } from "@/components/demo-mutation-alert";
 import { AccentPresetPicker } from "@/components/accent-preset-picker";
-import type { VenueSettingsState } from "@/server/actions/venues";
+import { useDemoVenue } from "@/components/demo-venue-provider";
+import { Alert, Button, Card, FieldHint, FieldLabel, Input, PageHeader, Select } from "@/components/ui";
 import type { VenueRow } from "@/server/repositories/venues";
 
-export function VenueSettingsForm({
-  venue,
-  action,
-  demoMode = false,
+export function DemoVenueSetupPage({
+  initialError,
+  initialVenue,
 }: {
-  venue: VenueRow;
-  action: (prevState: VenueSettingsState, formData: FormData) => Promise<VenueSettingsState>;
-  demoMode?: boolean;
+  initialError?: string;
+  initialVenue: VenueRow;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  const { saveVenueSettings, state } = useDemoVenue();
+  const venue = state.venue ?? initialVenue;
+  const [result, setResult] = useState<ReturnType<typeof saveVenueSettings> | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
+  const formKey = useMemo(
+    () => [
+      venue.accent_color,
+      venue.logo_url ?? "",
+      venue.membership_label,
+      venue.menu_label,
+      venue.name,
+      venue.tagline ?? "",
+      venue.venue_type,
+      venue.updated_at,
+    ].join("|"),
+    [venue],
+  );
+
+  const action = async (formData: FormData) => {
+    try {
+      setError(null);
+      setResult(saveVenueSettings(formData));
+    } catch (nextError) {
+      setResult(null);
+      setError(nextError instanceof Error ? nextError.message : "Unable to update venue settings.");
+    }
+  };
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
-      {state?.message && <Alert variant="success">{state.message}</Alert>}
-      {state?.error && <Alert variant="error">{state.error}</Alert>}
+    <div style={{ maxWidth: 680 }}>
+      <PageHeader subtitle="Configure your venue identity and display labels." title="Venue Setup" />
 
-      <fieldset className="contents" disabled={demoMode}>
+      <div className="mb-5 space-y-4">
+        <DemoMutationAlert onDismiss={() => setResult(null)} result={result} />
+        {error && (
+          <Alert onDismiss={() => setError(null)} variant="error">
+            {error}
+          </Alert>
+        )}
+      </div>
+
+      <form action={action} className="flex flex-col gap-5" key={formKey}>
         <Card>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Basic Info</div>
           <div className="flex flex-col gap-4">
@@ -133,7 +165,7 @@ export function VenueSettingsForm({
         <div className="flex gap-2">
           <Button size="lg" type="submit">Save changes</Button>
         </div>
-      </fieldset>
-    </form>
+      </form>
+    </div>
   );
 }

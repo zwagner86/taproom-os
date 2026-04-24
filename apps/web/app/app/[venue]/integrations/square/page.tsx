@@ -2,11 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { Alert, Badge, Button, Card, FieldHint, FieldLabel, Input, PageHeader, Select } from "@/components/ui";
 
-import { startSquareConnectAction, linkSquareItemAction, syncSquareItemsAction } from "@/server/actions/providers";
+import { DemoVenueSquarePage } from "@/components/demo-venue-square-page";
+import { linkSquareItemAction, startSquareConnectAction, syncSquareItemsAction } from "@/server/actions/providers";
+import { getCatalogProvider } from "@/server/providers";
 import { listVenueItems } from "@/server/repositories/items";
 import { getSquareConnectionForVenue } from "@/server/repositories/providers";
 import { requireVenueAccess } from "@/server/repositories/venues";
-import { getCatalogProvider } from "@/server/providers";
 
 export default async function VenueSquarePage({
   params,
@@ -16,17 +17,18 @@ export default async function VenueSquarePage({
   searchParams: Promise<{ error?: string; message?: string; q?: string }>;
 }) {
   const { venue } = await params;
-  const [{ venue: venueRecord }, { error, message, q }] = await Promise.all([
+  const [access, { error, message, q }] = await Promise.all([
     requireVenueAccess(venue),
     searchParams,
   ]);
+  const { venue: venueRecord } = access;
   const [connection, items] = await Promise.all([
     getSquareConnectionForVenue(venueRecord.id),
     listVenueItems(venueRecord.id),
   ]);
   const query = q?.trim() ?? "";
   const results =
-    query && connection?.status === "active"
+    !access.isDemoVenue && query && connection?.status === "active"
       ? await getCatalogProvider().searchCatalog({
           query,
           venueId: venueRecord.id,
@@ -35,6 +37,19 @@ export default async function VenueSquarePage({
   const connectAction = startSquareConnectAction.bind(null, venue);
   const syncAction = syncSquareItemsAction.bind(null, venue);
   const linkAction = linkSquareItemAction.bind(null, venue);
+
+  if (access.isDemoVenue) {
+    return (
+      <DemoVenueSquarePage
+        initialConnection={connection}
+        initialError={error}
+        initialItems={items}
+        initialQuery={query}
+        initialResults={results}
+        initialVenue={venueRecord}
+      />
+    );
+  }
 
   const statusVariant = connection?.status === "active" ? "success" :
     connection?.status === "error" ? "error" : "default";
@@ -50,7 +65,6 @@ export default async function VenueSquarePage({
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.5fr]">
-        {/* Left: connection status */}
         <div className="flex flex-col gap-4">
           <Card>
             <div className="flex items-center justify-between mb-3">
@@ -74,13 +88,13 @@ export default async function VenueSquarePage({
             )}
             <div className="flex flex-col gap-2">
               <form action={connectAction}>
-                <Button className="w-full" type="submit">
+                <Button className="w-full" disabled={access.isDemoVenue} type="submit">
                   {connection?.merchant_id ? "Reconnect Square" : "Connect Square"}
                 </Button>
               </form>
               {connection?.status === "active" && (
                 <form action={syncAction}>
-                  <Button className="w-full" type="submit" variant="secondary">
+                  <Button className="w-full" disabled={access.isDemoVenue} type="submit" variant="secondary">
                     Sync linked items
                   </Button>
                 </form>
@@ -97,7 +111,6 @@ export default async function VenueSquarePage({
           </Card>
         </div>
 
-        {/* Right: catalog search + link */}
         <div>
           <Card style={{ marginBottom: 16 }}>
             <div className="text-sm font-semibold mb-3" style={{ color: "var(--c-text)" }}>Search Square catalog</div>
@@ -156,40 +169,42 @@ export default async function VenueSquarePage({
                         </div>
                       </div>
                       <form action={linkAction} className="flex gap-2">
-                        <input name="external_id" type="hidden" value={result.id} />
-                        <div className="flex-1">
-                          <div className="flex flex-col gap-1">
-                            <FieldLabel
-                              htmlFor={`link-item-${result.id}`}
-                              info="Linking connects this Square variation to one TaproomOS menu item so live pricing and availability snapshots can stay in sync."
-                            >
-                              Link to TaproomOS item
-                            </FieldLabel>
-                            <div className="flex gap-2">
-                              <Select
-                                aria-describedby={`link-item-${result.id}-hint`}
-                                defaultValue=""
-                                id={`link-item-${result.id}`}
-                                name="item_id"
-                                required
-                                style={{ flex: 1 }}
+                        <fieldset className="contents" disabled={access.isDemoVenue}>
+                          <input name="external_id" type="hidden" value={result.id} />
+                          <div className="flex-1">
+                            <div className="flex flex-col gap-1">
+                              <FieldLabel
+                                htmlFor={`link-item-${result.id}`}
+                                info="Linking connects this Square variation to one TaproomOS menu item so live pricing and availability snapshots can stay in sync."
                               >
-                                <option disabled value="">Link to item…</option>
-                                {items
-                                  .filter((item) => item.type !== "event")
-                                  .map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                      {item.name}
-                                    </option>
-                                  ))}
-                              </Select>
-                              <Button size="sm" type="submit">Link</Button>
+                                Link to TaproomOS item
+                              </FieldLabel>
+                              <div className="flex gap-2">
+                                <Select
+                                  aria-describedby={`link-item-${result.id}-hint`}
+                                  defaultValue=""
+                                  id={`link-item-${result.id}`}
+                                  name="item_id"
+                                  required
+                                  style={{ flex: 1 }}
+                                >
+                                  <option disabled value="">Link to item…</option>
+                                  {items
+                                    .filter((item) => item.type !== "event")
+                                    .map((item) => (
+                                      <option key={item.id} value={item.id}>
+                                        {item.name}
+                                      </option>
+                                    ))}
+                                </Select>
+                                <Button size="sm" type="submit">Link</Button>
+                              </div>
+                              <FieldHint id={`link-item-${result.id}-hint`}>
+                                Choose the internal menu item that should receive price and availability snapshots from this Square variation.
+                              </FieldHint>
                             </div>
-                            <FieldHint id={`link-item-${result.id}-hint`}>
-                              Choose the internal menu item that should receive price and availability snapshots from this Square variation.
-                            </FieldHint>
                           </div>
-                        </div>
+                        </fieldset>
                       </form>
                     </Card>
                   ))}

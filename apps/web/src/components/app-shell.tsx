@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 
-import { Badge, Button, cn } from "@/components/ui";
+import { Alert, Badge, Button, cn } from "@/components/ui";
 
 type NavItem = { href: string; label: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
@@ -30,6 +30,7 @@ type AppShellProps = {
   userLabel: string;
   groups: NavGroup[];
   currentScreenLabel?: string;
+  demoMode?: boolean;
 };
 
 export function AppShell({
@@ -41,6 +42,7 @@ export function AppShell({
   userLabel,
   groups,
   currentScreenLabel,
+  demoMode = false,
 }: AppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -151,6 +153,11 @@ export function AppShell({
               <Badge className="hidden sm:inline-flex capitalize" variant="accent">
                 {venueType}
               </Badge>
+              {demoMode && (
+                <Badge className="hidden sm:inline-flex" variant="warning">
+                  Demo mode
+                </Badge>
+              )}
               <div className="hidden rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground md:block">
                 {venueSlug}.taproomos.com
               </div>
@@ -163,7 +170,14 @@ export function AppShell({
             </div>
           </header>
 
-          <main className="flex-1 px-4 py-6 md:px-6 lg:px-8 lg:py-8">{children}</main>
+          <main className="flex-1 px-4 py-6 md:px-6 lg:px-8 lg:py-8">
+            {demoMode && (
+              <Alert className="mb-5" variant="warning">
+                <strong>Demo venue.</strong> Changes stay in this tab only and reset on refresh.
+              </Alert>
+            )}
+            {children}
+          </main>
         </div>
       </div>
     </div>

@@ -6,8 +6,10 @@ import { redirect } from "next/navigation";
 
 import type { Database } from "../../../../../supabase/types";
 import { getEnv } from "@/env";
+import { isDemoVenueRecord } from "@/lib/demo-venue";
 import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import { slugify } from "@/lib/utils";
+import { redirectForDemoVenue } from "@/server/demo-venue";
 import { getPaymentsProvider } from "@/server/providers";
 import {
   createMembershipAdmin,
@@ -28,6 +30,11 @@ type MembershipPlanUpdate = Database["public"]["Tables"]["membership_plans"]["Up
 
 export async function createMembershipPlanAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/memberships`);
+  }
+
   const capability = await getVenuePaymentCapability(access.venue.id);
   const { payload, warning } = buildCreatePlanPayload(access.venue.id, formData, capability.canSellMemberships);
 
@@ -44,6 +51,11 @@ export async function createMembershipPlanAction(venueSlug: string, formData: Fo
 
 export async function updateMembershipPlanAction(venueSlug: string, formData: FormData) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/memberships`);
+  }
+
   const planId = String(formData.get("plan_id") ?? "");
   const capability = await getVenuePaymentCapability(access.venue.id);
   const existing = await getMembershipPlanById(access.venue.id, planId);
@@ -71,6 +83,10 @@ export async function startMembershipCheckoutAction(venueSlug: string, planId: s
 
   if (!plan || !venue) {
     redirect(`/v/${venueSlug}/memberships?error=${encodeURIComponent("Membership plan not found.")}`);
+  }
+
+  if (isDemoVenueRecord(venue)) {
+    redirectForDemoVenue(`/v/${venueSlug}/memberships`);
   }
 
   const capability = await getVenuePaymentCapability(venue.id);
@@ -147,6 +163,11 @@ export async function startMembershipCheckoutAction(venueSlug: string, planId: s
 
 export async function cancelMembershipAction(venueSlug: string, membershipId: string) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/memberships`);
+  }
+
   const connection = await getStripeConnectionForVenue(access.venue.id);
   const membership = await getMembershipById(access.venue.id, membershipId);
 
@@ -190,6 +211,11 @@ export async function cancelMembershipAction(venueSlug: string, membershipId: st
 
 export async function resumeMembershipAction(venueSlug: string, membershipId: string) {
   const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/memberships`);
+  }
+
   const connection = await getStripeConnectionForVenue(access.venue.id);
   const membership = await getMembershipById(access.venue.id, membershipId);
 

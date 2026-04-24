@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { DEMO_VENUE_ID } from "@/lib/demo-venue";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { DEMO_MODE_MESSAGE } from "@/server/demo-venue";
 import { getCatalogProvider } from "@/server/providers";
 import { listVenueItems } from "@/server/repositories/items";
 
@@ -19,6 +21,10 @@ export async function POST(request: Request) {
 
   if (!venueId) {
     return NextResponse.json({ error: "venueId is required" }, { status: 400 });
+  }
+
+  if (venueId === DEMO_VENUE_ID) {
+    return NextResponse.json({ error: DEMO_MODE_MESSAGE }, { status: 403 });
   }
 
   const { data: membership } = await supabase

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { Alert, PageHeader } from "@/components/ui";
 
+import { DemoVenueDisplaysPage } from "@/components/demo-venue-displays-page";
 import { DisplaysWorkspace } from "@/components/displays-workspace";
 import {
   deleteDisplayPlaylistAction,
@@ -36,6 +37,20 @@ export default async function VenueDisplaysPage({
     listVenueDisplayViews(access.venue.id),
     listVenueDisplayPlaylists(access.venue.id),
   ]);
+
+  if (access.isDemoVenue) {
+    return (
+      <DemoVenueDisplaysPage
+        appUrl={getEnv().NEXT_PUBLIC_APP_URL}
+        initialError={resolvedSearchParams.error}
+        initialPlaylists={playlists}
+        initialSearchParams={resolvedSearchParams}
+        initialVenue={venueRecord}
+        initialViews={views}
+        venueSlug={venue}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">
