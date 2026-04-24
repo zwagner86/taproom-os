@@ -12,6 +12,11 @@ export const VenueBrandingSchema = z.object({
     .string()
     .regex(/^#([0-9a-fA-F]{6})$/, "Use a hex color like #C96B2C")
     .default("#C96B2C"),
+  secondaryAccentColor: z
+    .string()
+    .regex(/^#([0-9a-fA-F]{6})$/, "Use a hex color like #2E9F9A")
+    .default("#2E9F9A"),
+  displayTheme: z.enum(["light", "dark"]).default("light"),
   logoUrl: z.string().url().nullable().default(null),
   tagline: z.string().trim().nullable().default(null),
 });
@@ -47,4 +52,3 @@ export function resolveTerminology(
     membershipLabel: overrides?.membershipLabel?.trim() || "Club",
   };
 }
-

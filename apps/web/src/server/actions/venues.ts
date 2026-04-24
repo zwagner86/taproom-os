@@ -144,17 +144,37 @@ export async function updateVenueSettingsAction(
 
   const supabase = await createServerSupabaseClient();
   const accentColor = normalizeHexColor(String(formData.get("accent_color") ?? access.venue.accent_color));
+  const secondaryAccentColor = normalizeHexColor(String(
+    formData.get("secondary_accent_color") ?? access.venue.secondary_accent_color ?? "#2E9F9A",
+  ));
+  const displayTheme = String(formData.get("display_theme") ?? access.venue.display_theme ?? "light");
 
   if (!accentColor) {
-    return { error: "Accent color must be a 3- or 6-digit hex value like #C96B2C." };
+    return { error: "Primary accent color must be a 3- or 6-digit hex value like #C96B2C." };
+  }
+
+  if (!secondaryAccentColor) {
+    return { error: "Secondary accent color must be a 3- or 6-digit hex value like #2E9F9A." };
+  }
+
+  if (displayTheme !== "light" && displayTheme !== "dark") {
+    return { error: "Display theme must be light or dark." };
+  }
+
+  let uploadedLogoUrl: string | null;
+
+  try {
+    uploadedLogoUrl = await uploadVenueLogo(access.venue.id, formData.get("logo_file"));
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to upload logo." };
   }
 
   const updates: Database["public"]["Tables"]["venues"]["Update"] = {
     accent_color: accentColor,
-    logo_url: normalizeOptionalString(formData.get("logo_url")),
-    membership_label: String(formData.get("membership_label") ?? access.venue.membership_label).trim() || "Club",
-    menu_label: String(formData.get("menu_label") ?? access.venue.menu_label).trim() || "Tap List",
+    display_theme: displayTheme,
+    logo_url: uploadedLogoUrl ?? normalizeOptionalString(formData.get("logo_url")),
     name: String(formData.get("name") ?? access.venue.name).trim(),
+    secondary_accent_color: secondaryAccentColor,
     tagline: normalizeOptionalString(formData.get("tagline")),
     venue_type: String(formData.get("venue_type") ?? access.venue.venue_type) as VenueInsert["venue_type"],
   };
@@ -168,8 +188,65 @@ export async function updateVenueSettingsAction(
   revalidatePath(`/app/${venueSlug}/setup`);
   revalidatePath(`/v/${venueSlug}/menu`);
   revalidatePath(`/embed/${venueSlug}/menu`);
+  revalidatePath(`/embed/${venueSlug}/display`);
   revalidatePath(`/tv/${venueSlug}`);
+  revalidatePath(`/tv/${venueSlug}/display`);
   return { message: "Venue settings saved." };
+}
+
+async function uploadVenueLogo(venueId: string, value: FormDataEntryValue | null) {
+  if (!(value instanceof File) || value.size === 0) {
+    return null;
+  }
+
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"]);
+
+  if (!allowedTypes.has(value.type)) {
+    throw new Error("Logo must be a JPG, PNG, WebP, GIF, or SVG image.");
+  }
+
+  if (value.size > 2 * 1024 * 1024) {
+    throw new Error("Logo must be smaller than 2 MB.");
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const extension = getLogoFileExtension(value);
+  const path = `${venueId}/logo-${Date.now()}.${extension}`;
+  const { error } = await supabase.storage.from("venue-logos").upload(path, value, {
+    cacheControl: "31536000",
+    contentType: value.type,
+    upsert: true,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { data } = supabase.storage.from("venue-logos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function getLogoFileExtension(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+
+  if (extension && /^[a-z0-9]+$/.test(extension)) {
+    return extension;
+  }
+
+  switch (file.type) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    case "image/svg+xml":
+      return "svg";
+    default:
+      return "img";
+  }
 }
 
 function normalizeOptionalString(value: FormDataEntryValue | null) {

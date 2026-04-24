@@ -1,9 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { sortBookingsForCheckIn } from "@taproom/domain";
-import { Alert, Badge, Button, Card, FieldHint, FieldLabel, Input, PageHeader } from "@/components/ui";
+import { Alert, Badge, Button, Card, PageHeader } from "@/components/ui";
 import { notFound } from "next/navigation";
 
+import { AdminCreateDrawer } from "@/components/admin-create-drawer";
+import { CheckInSessionCreateForm } from "@/components/admin-create-forms";
 import { DemoVenueCheckInPage } from "@/components/demo-venue-check-in-page";
 import { getEnv } from "@/env";
 import { adjustCheckInAction, createCheckInSessionAction } from "@/server/actions/events";
@@ -73,7 +75,18 @@ export default async function VenueCheckInPage({
 
       {/* Shared session */}
       <Card style={{ marginBottom: 20 }}>
-        <div className="text-sm font-semibold mb-3" style={{ color: "var(--c-text)" }}>Shared door session</div>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="text-sm font-semibold" style={{ color: "var(--c-text)" }}>Shared door session</div>
+          {!session && (
+            <AdminCreateDrawer
+              description="Create one door-staff link for this event. PIN is optional."
+              title="New shared session"
+              triggerLabel="New session"
+            >
+              <CheckInSessionCreateForm action={createSessionAction} disabled={access.isDemoVenue} />
+            </AdminCreateDrawer>
+          )}
+        </div>
         <p className="text-[13px] mb-4" style={{ color: "var(--c-muted)" }}>
           Create one session per event and share the link with door staff. PIN is optional.
         </p>
@@ -98,37 +111,7 @@ export default async function VenueCheckInPage({
               </div>
             </div>
           </div>
-        ) : (
-          <form action={createSessionAction} className="grid gap-3 md:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <FieldLabel htmlFor="session-name">Session name</FieldLabel>
-              <Input
-                aria-describedby="session-name-hint"
-                defaultValue="Shared check-in"
-                id="session-name"
-                name="session_name"
-              />
-              <FieldHint id="session-name-hint">
-                Give the shared session a clear name so staff know which link to use at the door.
-              </FieldHint>
-            </div>
-            <div className="flex flex-col gap-1">
-              <FieldLabel
-                htmlFor="session-pin"
-                info="Add a PIN if you want staff to enter a short code before they can use the shared check-in page."
-              >
-                PIN (optional)
-              </FieldLabel>
-              <Input aria-describedby="session-pin-hint" id="session-pin" name="pin" placeholder="Leave blank for no PIN" />
-              <FieldHint id="session-pin-hint">
-                Leave this blank for faster access, or set a short code if the shared link may circulate beyond your staff.
-              </FieldHint>
-            </div>
-            <div className="col-span-2">
-              <Button type="submit">Create shared session</Button>
-            </div>
-          </form>
-        )}
+        ) : null}
       </Card>
 
       {/* Guest list */}

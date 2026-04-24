@@ -727,11 +727,13 @@ export type Database = {
         Row: {
           accent_color: string;
           created_at: string;
+          display_theme: string;
           id: string;
           logo_url: string | null;
           membership_label: string;
           menu_label: string;
           name: string;
+          secondary_accent_color: string;
           slug: string;
           tagline: string | null;
           updated_at: string;
@@ -740,11 +742,13 @@ export type Database = {
         Insert: {
           accent_color?: string;
           created_at?: string;
+          display_theme?: string;
           id?: string;
           logo_url?: string | null;
           membership_label?: string;
           menu_label?: string;
           name: string;
+          secondary_accent_color?: string;
           slug: string;
           tagline?: string | null;
           updated_at?: string;
@@ -753,11 +757,13 @@ export type Database = {
         Update: {
           accent_color?: string;
           created_at?: string;
+          display_theme?: string;
           id?: string;
           logo_url?: string | null;
           membership_label?: string;
           menu_label?: string;
           name?: string;
+          secondary_accent_color?: string;
           slug?: string;
           tagline?: string | null;
           updated_at?: string;
@@ -781,7 +787,7 @@ export type Database = {
     Enums: {
       billing_interval: "month" | "quarter" | "year";
       booking_status: "pending" | "confirmed" | "cancelled";
-      item_type: "pour" | "food" | "merch" | "event";
+      item_type: "pour" | "food" | "merch";
       notification_channel: "email" | "sms";
       payment_status: "unpaid" | "paid" | "refunded";
       price_source: "unpriced" | "manual" | "square";

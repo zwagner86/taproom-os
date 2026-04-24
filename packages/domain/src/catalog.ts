@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const itemTypes = ["pour", "food", "merch", "event"] as const;
+export const itemTypes = ["pour", "food", "merch"] as const;
 export const priceSources = ["unpriced", "manual", "square"] as const;
 
 export const ItemTypeSchema = z.enum(itemTypes);
@@ -66,4 +66,3 @@ export function resolveDisplayedPrice(
 
   return null;
 }
-

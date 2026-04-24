@@ -5,9 +5,10 @@ import Link from "next/link";
 
 import { Calendar } from "lucide-react";
 
-import { Alert, Badge, Button, Card, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { Alert, Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
-import { DateTimeField } from "@/components/date-time-field";
+import { AdminCreateDrawer } from "@/components/admin-create-drawer";
+import { EventCreateForm } from "@/components/admin-create-forms";
 import { DemoVenueEventsPage } from "@/components/demo-venue-events-page";
 import { EventEditPanel } from "@/components/event-edit-panel";
 import { getPaidEventGateCopy } from "@/lib/venue-payment-capability";
@@ -59,7 +60,23 @@ export default async function VenueEventsPage({
 
   return (
     <div>
-      <PageHeader title="Event Management" subtitle={`${events.length} events · ${publishedCount} published`} />
+      <PageHeader
+        actions={
+          <AdminCreateDrawer
+            description="Create a draft or published event for RSVPs, tickets, public pages, and displays."
+            title="New event"
+            triggerLabel="New event"
+          >
+            <EventCreateForm
+              action={createAction}
+              canSellPaidEvents={capability.canSellPaidEvents}
+              disabled={access.isDemoVenue}
+            />
+          </AdminCreateDrawer>
+        }
+        title="Event Management"
+        subtitle={`${events.length} events · ${publishedCount} published`}
+      />
 
       {!capability.canSellPaidEvents && (
         <Alert variant="warning" className="mb-5">
@@ -78,7 +95,7 @@ export default async function VenueEventsPage({
         <EmptyState
           icon={<Calendar className="w-9 h-9 text-muted" />}
           title="No events yet"
-          description="Create your first RSVP or paid event below."
+          description="Create your first RSVP or paid event."
           className="mb-5"
         />
       ) : (
@@ -173,100 +190,6 @@ export default async function VenueEventsPage({
         </div>
       )}
 
-      {/* Create event form */}
-      <Card>
-        <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>New event</div>
-        <form action={createAction} className="flex flex-col gap-3">
-          <fieldset className="contents" disabled={access.isDemoVenue}>
-            <div className="flex flex-col gap-1">
-              <FieldLabel htmlFor="create-title" required>Title</FieldLabel>
-              <Input aria-describedby="create-title-hint" id="create-title" name="title" placeholder="Trivia Night" required />
-              <FieldHint id="create-title-hint">
-                This title appears on the public event page, check-in screen, and admin event list.
-              </FieldHint>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-3">
-              <div className="flex flex-col gap-1">
-                <FieldLabel
-                  htmlFor="create-capacity"
-                  info="Capacity limits how many total seats or spots can be booked for the event."
-                >
-                  Capacity
-                </FieldLabel>
-                <Input aria-describedby="create-capacity-hint" id="create-capacity" name="capacity" placeholder="80" type="number" />
-                <FieldHint id="create-capacity-hint">
-                  Leave this blank if the event does not have a booking cap.
-                </FieldHint>
-              </div>
-              <div className="flex flex-col gap-1">
-                <FieldLabel
-                  htmlFor="create-price"
-                  info="Prices are stored in cents, so enter 1500 for a $15.00 ticket."
-                >
-                  Price (cents)
-                </FieldLabel>
-                <Input
-                  aria-describedby={`create-price-hint${!capability.canSellPaidEvents ? " create-price-gate" : ""}`}
-                  id="create-price"
-                  name="price_cents"
-                  placeholder="1500"
-                  type="number"
-                />
-                <FieldHint id="create-price-hint">Leave this blank or set it to `0` to make the event free.</FieldHint>
-                {!capability.canSellPaidEvents && (
-                  <span className="text-xs text-amber-600" id="create-price-gate">{getPaidEventGateCopy()}</span>
-                )}
-              </div>
-              <div className="flex flex-col gap-1">
-                <FieldLabel
-                  htmlFor="create-status"
-                  info="Draft keeps the event hidden until you are ready. Published shows it on public event listings."
-                >
-                  Status
-                </FieldLabel>
-                <Select aria-describedby="create-status-hint" defaultValue="draft" id="create-status" name="status">
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                </Select>
-                <FieldHint id="create-status-hint">
-                  Start with Draft if you still need to confirm details before guests can see the event.
-                </FieldHint>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <DateTimeField
-                hint="Set the local start date and time that should appear on tickets, listings, and check-in tools."
-                info="Use your venue's local time. This field is required for every event."
-                label="Starts at"
-                name="starts_at"
-                required
-              />
-              <DateTimeField
-                hint="Optional. Add an end time if you want guests and staff to see when the event wraps up."
-                info="Leave this empty for open-ended events or when only the start time matters."
-                label="Ends at"
-                name="ends_at"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <FieldLabel htmlFor="create-desc">Description</FieldLabel>
-              <Textarea
-                aria-describedby="create-desc-hint"
-                id="create-desc"
-                name="description"
-                placeholder="Short event copy for the public page"
-                rows={2}
-              />
-              <FieldHint id="create-desc-hint">
-                Optional copy shown on the public event page and on displays when descriptions are enabled.
-              </FieldHint>
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit">Create event</Button>
-            </div>
-          </fieldset>
-        </form>
-      </Card>
     </div>
   );
 }

@@ -9,8 +9,11 @@ import { getDemoVenueFormState, redirectForDemoVenue } from "@/server/demo-venue
 
 type ItemInsert = Database["public"]["Tables"]["items"]["Insert"];
 type ItemUpdate = Database["public"]["Tables"]["items"]["Update"];
+type ItemType = Database["public"]["Enums"]["item_type"];
 
 export type ItemFormState = { message?: string; error?: string } | null;
+
+const ITEM_TYPES: ItemType[] = ["pour", "food", "merch"];
 
 export async function createItemAction(
   venueSlug: string,
@@ -34,7 +37,7 @@ export async function createItemAction(
     name: String(formData.get("name") ?? "").trim(),
     price_source: "unpriced",
     style_or_category: normalizeOptionalString(formData.get("style_or_category")),
-    type: String(formData.get("type") ?? "pour") as ItemInsert["type"],
+    type: parseItemType(formData.get("type")),
     venue_id: access.venue.id,
   };
 
@@ -66,7 +69,7 @@ export async function updateItemAction(venueSlug: string, formData: FormData) {
     image_url: normalizeOptionalString(formData.get("image_url")),
     name: String(formData.get("name") ?? "").trim(),
     style_or_category: normalizeOptionalString(formData.get("style_or_category")),
-    type: String(formData.get("type") ?? "pour") as ItemUpdate["type"],
+    type: parseItemType(formData.get("type")),
   };
 
   const { error } = await supabase.from("items").update(payload).eq("id", itemId).eq("venue_id", access.venue.id);
@@ -132,6 +135,11 @@ function parseOptionalNumber(value: FormDataEntryValue | null) {
 function normalizeOptionalString(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function parseItemType(value: FormDataEntryValue | null): ItemType {
+  const normalized = String(value ?? "pour").trim();
+  return ITEM_TYPES.includes(normalized as ItemType) ? (normalized as ItemType) : "pour";
 }
 
 async function getVenueAccessOrRedirect(slug: string) {

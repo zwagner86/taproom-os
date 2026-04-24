@@ -8,16 +8,15 @@ type ItemRecord = Database["public"]["Tables"]["items"]["Row"] & {
   item_external_links: Database["public"]["Tables"]["item_external_links"]["Row"][];
 };
 
-type ItemType = "pour" | "food" | "merch" | "event";
+type ItemType = "pour" | "food" | "merch";
 
-const TYPE_EMOJI: Record<string, string> = { pour: "🍺", food: "🥨", merch: "👕", event: "🎟" };
+const TYPE_EMOJI: Record<string, string> = { pour: "🍺", food: "🥨", merch: "👕" };
 
-const GROUP_ORDER: ItemType[] = ["pour", "food", "merch", "event"];
+const GROUP_ORDER: ItemType[] = ["pour", "food", "merch"];
 const GROUP_LABELS: Record<ItemType, string> = {
   pour: "Pours",
   food: "Food",
   merch: "Merch",
-  event: "Events",
 };
 
 export function PublicItemList({ items, emptyMessage }: { items: ItemRecord[]; emptyMessage?: string }) {

@@ -120,6 +120,8 @@ describe("displays workspace", () => {
     expect(markup).toContain("Stable display URL");
     expect(markup).toContain("/tap-list-tv");
     expect(markup).toContain("Content");
+    expect(markup).toContain("Theme");
+    expect(markup).toContain("Venue default");
     expect(markup).toContain("Saved");
     expect(markup).toContain("Live preview");
   });

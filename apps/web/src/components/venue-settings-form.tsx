@@ -72,44 +72,14 @@ export function VenueSettingsForm({
         </Card>
 
         <Card>
-          <div className="text-sm font-semibold mb-1" style={{ color: "var(--c-text)" }}>Display Labels</div>
-          <p className="text-[12.5px] mb-4" style={{ color: "var(--c-muted)" }}>
-            Customize how your menu and membership program are named throughout TaproomOS.
-          </p>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <FieldLabel
-                htmlFor="menu_label"
-                info="This label is reused anywhere your main list of pours, food, or merch is referenced. Use the language your staff and guests already know."
-              >
-                Menu label
-              </FieldLabel>
-              <Input aria-describedby="menu-label-hint" defaultValue={venue.menu_label} id="menu_label" name="menu_label" placeholder="Tap List" />
-              <FieldHint id="menu-label-hint">Use a label like Tap List, Pour List, or Menu.</FieldHint>
-            </div>
-            <div className="flex flex-col gap-1">
-              <FieldLabel
-                htmlFor="membership_label"
-                info="This label appears on membership admin screens and public membership signup pages."
-              >
-                Membership label
-              </FieldLabel>
-              <Input
-                aria-describedby="membership-label-hint"
-                defaultValue={venue.membership_label}
-                id="membership_label"
-                name="membership_label"
-                placeholder="Mug Club"
-              />
-              <FieldHint id="membership-label-hint">Use a label like Mug Club, Beer Club, or Bottle Society.</FieldHint>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
           <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Branding</div>
           <div className="flex flex-col gap-4">
-            <AccentPresetPicker defaultValue={venue.accent_color} />
+            <AccentPresetPicker
+              defaultSecondaryValue={venue.secondary_accent_color}
+              defaultTheme={venue.display_theme}
+              defaultValue={venue.accent_color}
+              logoUrl={venue.logo_url}
+            />
             <div className="flex flex-col gap-1">
               <FieldLabel
                 htmlFor="logo_url"

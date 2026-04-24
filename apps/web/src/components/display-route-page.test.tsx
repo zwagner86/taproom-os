@@ -32,11 +32,12 @@ vi.mock("./display-view", () => ({
     config,
     venueSlug,
   }: {
-    config: { content: string; surface: string };
+    config: { content: string; surface: string; theme?: string };
     venueSlug: string;
   }) => createElement("div", {
     "data-content": config.content,
     "data-surface": config.surface,
+    "data-theme": config.theme,
     "data-venue": venueSlug,
   }),
 }));
@@ -63,7 +64,7 @@ describe("display route helpers", () => {
 
     const markup = renderToStaticMarkup(
       await renderAdHocDisplaySurfacePage({
-        searchParams: { content: "events" },
+        searchParams: { content: "events", theme: "dark" },
         surface: "embed",
         venueSlug: "demo-taproom",
       }),
@@ -71,6 +72,7 @@ describe("display route helpers", () => {
 
     expect(markup).toContain('data-content="events"');
     expect(markup).toContain('data-surface="embed"');
+    expect(markup).toContain('data-theme="dark"');
     expect(markup).toContain('data-venue="demo-taproom"');
   });
 

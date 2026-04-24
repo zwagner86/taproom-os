@@ -49,6 +49,7 @@ type DemoVenueContextValue = {
   dispatchSeedNotifications: (logs: DemoNotificationLogRecord[]) => void;
   saveDisplayPlaylist: (formData: FormData) => DemoMutationResult;
   saveDisplayView: (formData: FormData) => DemoMutationResult;
+  saveMembershipProgramName: (formData: FormData) => DemoMutationResult;
   saveVenueSettings: (formData: FormData) => DemoMutationResult;
   sendBroadcast: (formData: FormData) => DemoMutationResult;
   state: DemoVenueState;
@@ -109,19 +110,29 @@ export function DemoVenueProvider({
   const saveVenueSettings = useCallback((formData: FormData) => {
     const venue = requireDemoVenue(stateRef.current);
     const accentColor = normalizeHexColor(String(formData.get("accent_color") ?? venue.accent_color));
+    const secondaryAccentColor = normalizeHexColor(String(formData.get("secondary_accent_color") ?? venue.secondary_accent_color ?? "#2E9F9A"));
+    const displayTheme = String(formData.get("display_theme") ?? venue.display_theme ?? "light");
 
     if (!accentColor) {
-      throw new Error("Accent color must be a 3- or 6-digit hex value like #C96B2C.");
+      throw new Error("Primary accent color must be a 3- or 6-digit hex value like #C96B2C.");
+    }
+
+    if (!secondaryAccentColor) {
+      throw new Error("Secondary accent color must be a 3- or 6-digit hex value like #2E9F9A.");
+    }
+
+    if (displayTheme !== "light" && displayTheme !== "dark") {
+      throw new Error("Display theme must be light or dark.");
     }
 
     dispatch({
       type: "update_venue",
       venue: {
         accent_color: accentColor,
+        display_theme: displayTheme,
         logo_url: normalizeOptionalString(formData.get("logo_url")),
-        membership_label: String(formData.get("membership_label") ?? venue.membership_label).trim() || "Club",
-        menu_label: String(formData.get("menu_label") ?? venue.menu_label).trim() || "Tap List",
         name: String(formData.get("name") ?? venue.name).trim() || venue.name,
+        secondary_accent_color: secondaryAccentColor,
         tagline: normalizeOptionalString(formData.get("tagline")),
         updated_at: new Date().toISOString(),
         venue_type: String(formData.get("venue_type") ?? venue.venue_type) as VenueRow["venue_type"],
@@ -129,6 +140,20 @@ export function DemoVenueProvider({
     });
 
     return createDemoMutationResult("Venue settings updated for demo.");
+  }, []);
+
+  const saveMembershipProgramName = useCallback((formData: FormData) => {
+    const venue = requireDemoVenue(stateRef.current);
+
+    dispatch({
+      type: "update_venue",
+      venue: {
+        membership_label: String(formData.get("membership_label") ?? venue.membership_label).trim() || "Club",
+        updated_at: new Date().toISOString(),
+      },
+    });
+
+    return createDemoMutationResult("Membership program name updated for demo.");
   }, []);
 
   const createItem = useCallback((formData: FormData) => {
@@ -566,6 +591,7 @@ export function DemoVenueProvider({
       dispatchSeedNotifications,
       saveDisplayPlaylist,
       saveDisplayView,
+      saveMembershipProgramName,
       saveVenueSettings,
       sendBroadcast,
       state,
@@ -592,6 +618,7 @@ export function DemoVenueProvider({
       dispatchSeedNotifications,
       saveDisplayPlaylist,
       saveDisplayView,
+      saveMembershipProgramName,
       saveVenueSettings,
       sendBroadcast,
       state,

@@ -23,7 +23,7 @@ export default async function VenueSetupPage({
 
   return (
     <div style={{ maxWidth: 680 }}>
-      <PageHeader title="Venue Setup" subtitle="Configure your venue identity and display labels." />
+      <PageHeader title="Venue Setup" subtitle="Configure your venue identity and branding." />
       <VenueSettingsForm action={action} demoMode={false} venue={venueRecord} />
     </div>
   );

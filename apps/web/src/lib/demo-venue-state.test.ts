@@ -34,7 +34,7 @@ describe("demo venue state", () => {
     const updated = demoVenueReducer(seeded, {
       type: "update_venue",
       venue: {
-        menu_label: "Pour Board",
+        membership_label: "Bottle Society",
         name: "Preview Taproom",
       },
     });
@@ -45,7 +45,7 @@ describe("demo venue state", () => {
 
     expect(seeded.venue?.name).toBe("Demo Taproom");
     expect(updated.venue?.name).toBe("Preview Taproom");
-    expect(updated.venue?.menu_label).toBe("Pour Board");
+    expect(updated.venue?.membership_label).toBe("Bottle Society");
     expect(ignoredReseed.venue?.name).toBe("Preview Taproom");
   });
 
@@ -198,11 +198,13 @@ function makeVenue(overrides: Partial<VenueRow> = {}): VenueRow {
   return {
     accent_color: "#c96b2c",
     created_at: "2026-04-01T09:00:00.000Z",
+    display_theme: "light",
     id: "venue-1",
     logo_url: null,
     membership_label: "Mug Club",
     menu_label: "Tap List",
     name: "Demo Taproom",
+    secondary_accent_color: "#2E9F9A",
     slug: "demo-taproom",
     tagline: "Small batch. Big character.",
     updated_at: "2026-04-01T09:00:00.000Z",

@@ -1,18 +1,15 @@
 export const dynamic = "force-dynamic";
 
-import { Alert, Badge, Button, Card, DataTable, EmptyState, PageHeader } from "@/components/ui";
+import { Alert, Button, PageHeader } from "@/components/ui";
 
-import { Beer } from "lucide-react";
-
-import { AddItemForm } from "@/components/add-item-form";
+import { AddItemDrawer } from "@/components/add-item-form";
 import { DemoVenueItemsPage } from "@/components/demo-venue-items-page";
 import { ItemActiveToggle } from "@/components/item-active-toggle";
+import { ItemManagementSection } from "@/components/item-management-sections";
+import { ITEM_SECTION_CONFIGS, groupCatalogItems } from "@/lib/item-management";
 import { createItemAction, deleteItemAction, toggleItemActiveAction } from "@/server/actions/items";
 import { listVenueItems } from "@/server/repositories/items";
 import { requireVenueAccess } from "@/server/repositories/venues";
-
-const TYPE_EMOJI: Record<string, string> = { pour: "🍺", food: "🥨", merch: "👕", event: "🎟" };
-const TYPE_LABELS: Record<string, string> = { pour: "Pour", food: "Food", merch: "Merch", event: "Event" };
 
 export default async function VenueItemsPage({
   params,
@@ -29,6 +26,7 @@ export default async function VenueItemsPage({
   const { venue: venueRecord } = access;
   const items = await listVenueItems(venueRecord.id);
   const activeCount = items.filter((i) => i.active).length;
+  const groupedItems = groupCatalogItems(items);
 
   if (access.isDemoVenue) {
     return <DemoVenueItemsPage initialItems={items} initialVenue={venueRecord} />;
@@ -39,99 +37,51 @@ export default async function VenueItemsPage({
 
   return (
     <div>
-      <PageHeader title="Item Management" subtitle={`${venueRecord.menu_label} — ${activeCount} active items`} />
+      <PageHeader
+        title="Item Management"
+        subtitle={`${activeCount} active items across drinks, food, and merch`}
+      />
 
       {message && <Alert variant="success" className="mb-5">{message}</Alert>}
       {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
-      {items.length > 0 && (
-        <DataTable
-          rows={items}
-          keyExtractor={(item) => item.id}
-          striped
-          className="mb-5"
-          columns={[
-            {
-              key: "item",
-              label: "Item",
-              render: (item) => (
-                <div className="flex items-center gap-2.5">
-                  <span style={{ fontSize: 16 }}>{TYPE_EMOJI[item.type] ?? "•"}</span>
-                  <div>
-                    <div className="font-semibold" style={{ color: item.active ? "var(--c-text)" : "var(--c-muted)" }}>
-                      {item.name}
-                    </div>
-                    {item.description && (
-                      <div className="text-[11.5px] mt-px truncate max-w-[200px]" style={{ color: "var(--c-muted)" }}>
-                        {item.description}
-                      </div>
-                    )}
-                  </div>
+      <div className="mt-6 space-y-8">
+        {ITEM_SECTION_CONFIGS.map((section) => (
+          <ItemManagementSection
+            actionRenderer={
+              <AddItemDrawer
+                action={createAction}
+                disabled={access.isDemoVenue}
+                itemType={section.type}
+                triggerLabel={section.newLabel}
+              />
+            }
+            items={groupedItems[section.type]}
+            key={section.type}
+            renderActions={(item) => {
+              const toggleAction = toggleItemActiveAction.bind(null, venue, item.id);
+              return (
+                <div className="flex items-center gap-2">
+                  <ItemActiveToggle active={item.active} action={toggleAction} disabled={access.isDemoVenue} />
+                  <form action={deleteAction}>
+                    <input name="item_id" type="hidden" value={item.id} />
+                    <Button
+                      disabled={access.isDemoVenue}
+                      size="sm"
+                      type="submit"
+                      variant="ghost"
+                      style={{ color: "var(--c-muted)" }}
+                    >
+                      Del
+                    </Button>
+                  </form>
                 </div>
-              ),
-            },
-            {
-              key: "type",
-              label: "Type",
-              render: (item) => <Badge variant="info">{TYPE_LABELS[item.type] ?? item.type}</Badge>,
-            },
-            {
-              key: "abv",
-              label: "ABV / Category",
-              render: (item) => (
-                <span style={{ color: "var(--c-muted)", fontSize: 13 }}>
-                  {[item.style_or_category, item.abv ? `${item.abv}% ABV` : null].filter(Boolean).join(" · ") || "—"}
-                </span>
-              ),
-            },
-            {
-              key: "status",
-              label: "Status",
-              render: (item) => (
-                <Badge variant={item.active ? "success" : "default"}>{item.active ? "Active" : "Hidden"}</Badge>
-              ),
-            },
-            {
-              key: "actions",
-              label: "Actions",
-              render: (item) => {
-                const toggleAction = toggleItemActiveAction.bind(null, venue, item.id);
-                return (
-                  <div className="flex items-center gap-2">
-                    <ItemActiveToggle active={item.active} action={toggleAction} disabled={access.isDemoVenue} />
-                    <form action={deleteAction}>
-                      <input name="item_id" type="hidden" value={item.id} />
-                      <Button
-                        disabled={access.isDemoVenue}
-                        size="sm"
-                        type="submit"
-                        variant="ghost"
-                        style={{ color: "var(--c-muted)" }}
-                      >
-                        Del
-                      </Button>
-                    </form>
-                  </div>
-                );
-              },
-            },
-          ]}
-        />
-      )}
-
-      {items.length === 0 && (
-        <EmptyState
-          icon={<Beer className="w-9 h-9 text-muted" />}
-          title="No items"
-          description="Add your first tap, food item, or merch below."
-          className="mb-5"
-        />
-      )}
-
-      <Card>
-        <div className="text-sm font-semibold mb-4" style={{ color: "var(--c-text)" }}>Add item</div>
-        <AddItemForm action={createAction} disabled={access.isDemoVenue} />
-      </Card>
+              );
+            }}
+            type={section.type}
+          />
+        ))}
+      </div>
     </div>
   );
 }

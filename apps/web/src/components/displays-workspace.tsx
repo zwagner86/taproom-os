@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge, Button, FieldHint, FieldLabel, Input, Select, Sheet, SheetContent, Tabs, Toggle, cn } from "@/components/ui";
+import { Badge, Button, FieldHint, FieldLabel, Input, Select, Sheet, SheetContent, SheetTitle, Tabs, Toggle, cn } from "@/components/ui";
 
 import {
   getDraftDisplayContent,
@@ -18,6 +18,7 @@ import {
   DISPLAY_CONTENT_LABELS,
   DISPLAY_CONTENTS,
   DISPLAY_SURFACE_LABELS,
+  DISPLAY_THEME_LABELS,
   buildAdHocDisplayPath,
   buildSavedDisplayPath,
   extractDisplayViewOptions,
@@ -360,27 +361,20 @@ export function DisplaysWorkspace({
 
   return (
     <>
-      <section
-        className="overflow-hidden rounded-[28px] border shadow-panel"
-        style={{
-          background: "linear-gradient(180deg, rgba(255,255,255,0.98), color-mix(in srgb, var(--c-bg2) 74%, white))",
-          borderColor: "var(--c-border)",
-        }}
-      >
-        <div className="border-b px-5 py-5 md:px-6 md:py-6" style={{ borderColor: "var(--c-border)" }}>
-          <Tabs
-            active={workspaceState.tab}
-            className="mb-0 border-b-0"
-            onChange={handleTopTabChange}
-            tabs={[
-              { id: "views", label: "Views" },
-              { id: "playlists", label: "Playlists" },
-            ]}
-          />
-        </div>
+      <div className="space-y-3">
+        <Tabs
+          active={workspaceState.tab}
+          className="mb-0 border-b-0"
+          onChange={handleTopTabChange}
+          tabs={[
+            { id: "views", label: "Views" },
+            { id: "playlists", label: "Playlists" },
+          ]}
+        />
 
-        <div className="space-y-5 px-5 py-5 md:px-6 md:py-6">
-          {workspaceState.tab === "views" ? (
+        <div className="rounded-[28px] border border-border bg-card p-4 shadow-sm md:p-6">
+          <div className="space-y-8">
+            {workspaceState.tab === "views" ? (
             <>
               <PresetSection
                 description="The single canonical public view for each page type. Save custom settings once and they apply anywhere that public page is shared."
@@ -568,9 +562,10 @@ export function DisplaysWorkspace({
                 </ListFrame>
               </PresetSection>
             </>
-          )}
+            )}
+          </div>
         </div>
-      </section>
+      </div>
 
       {workspaceState.drawer && (
         <DisplayAdminDrawer
@@ -1178,16 +1173,13 @@ function PresetSection({
   title: string;
 }) {
   return (
-    <section
-      className="rounded-[24px] border p-4 md:p-5"
-      style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.8)" }}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="space-y-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-[15px] font-semibold" style={{ color: "var(--c-text)" }}>
+          <h2 className="text-lg font-semibold tracking-[-0.01em]" style={{ color: "var(--c-text)" }}>
             {title}
-          </div>
-          <p className="mt-2 max-w-[760px] text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6" style={{ color: "var(--c-muted)" }}>
             {description}
           </p>
         </div>
@@ -1197,7 +1189,7 @@ function PresetSection({
           </Button>
         )}
       </div>
-      <div className="mt-4">{children}</div>
+      {children}
     </section>
   );
 }
@@ -1254,10 +1246,7 @@ function ListFrame({
   className?: string;
 }) {
   return (
-    <div
-      className={cn("overflow-hidden rounded-[18px] border", className)}
-      style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.72)" }}
-    >
+    <div className={cn("overflow-hidden rounded-2xl border border-border bg-card shadow-sm", className)}>
       {children}
     </div>
   );
@@ -1373,9 +1362,9 @@ function DisplayAdminDrawer({
         <div className="border-b px-5 py-4 md:px-6" style={{ borderColor: "var(--c-border)" }}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: "var(--c-text)" }}>
+              <SheetTitle className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: "var(--c-text)" }}>
                 {title}
-              </div>
+              </SheetTitle>
               {badges && <div className="mt-3 flex flex-wrap gap-2">{badges}</div>}
             </div>
             <Button onClick={onClose} size="sm" type="button" variant="secondary">
@@ -1414,7 +1403,7 @@ function ViewSettingsFields({
 }) {
   return (
     <EditorSection title="Display settings">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor="display-density">Density</FieldLabel>
           <Select
@@ -1428,6 +1417,25 @@ function ViewSettingsFields({
             <option value="comfortable">Comfortable</option>
             <option value="compact">Compact</option>
           </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <FieldLabel htmlFor="display-theme">Theme</FieldLabel>
+          <Select
+            className="bg-white"
+            id="display-theme"
+            onChange={(event) =>
+              setOptions((current) => ({ ...current, theme: event.target.value as DisplayViewOptions["theme"] }))
+            }
+            value={options.theme}
+          >
+            {Object.entries(DISPLAY_THEME_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </Select>
+          <FieldHint>
+            Venue default follows the setting from Venue Setup.
+          </FieldHint>
         </div>
 
         <div className="flex flex-col gap-1">

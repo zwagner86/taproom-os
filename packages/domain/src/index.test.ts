@@ -10,6 +10,7 @@ import {
   resolveDisplayedPrice,
   resolveTerminology,
   sortBookingsForCheckIn,
+  ItemTypeSchema,
 } from "./index";
 
 describe("domain helpers", () => {
@@ -27,6 +28,11 @@ describe("domain helpers", () => {
         { priceSnapshotCents: 900, priceSnapshotCurrency: "USD" },
       ),
     ).toBe("$9.00");
+  });
+
+  it("does not allow event as a catalog item type", () => {
+    expect(ItemTypeSchema.safeParse("pour").success).toBe(true);
+    expect(ItemTypeSchema.safeParse("event").success).toBe(false);
   });
 
   it("calculates application fees in cents", () => {

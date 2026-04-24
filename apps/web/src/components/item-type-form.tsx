@@ -3,77 +3,81 @@
 import { useState } from "react";
 
 import { Button, FieldHint, FieldLabel, Input, Select, Textarea } from "@/components/ui";
-
-type ItemType = "pour" | "food" | "merch" | "event";
+import type { CatalogItemType } from "@/lib/item-management";
 
 type ItemTypeFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   disabled?: boolean;
   defaultValues?: {
     name?: string;
-    type?: ItemType;
+    type?: CatalogItemType;
     style_or_category?: string;
     abv?: number | null;
     description?: string;
   };
+  fixedType?: CatalogItemType;
   submitLabel?: string;
 };
 
-const TYPE_OPTIONS: { value: ItemType; label: string }[] = [
+const TYPE_OPTIONS: { value: CatalogItemType; label: string }[] = [
   { value: "pour", label: "Pour" },
   { value: "food", label: "Food" },
   { value: "merch", label: "Merch" },
-  { value: "event", label: "Event listing" },
 ];
 
-export function ItemTypeForm({ action, disabled = false, defaultValues, submitLabel = "+ Add item" }: ItemTypeFormProps) {
-  const [type, setType] = useState<ItemType>(defaultValues?.type ?? "pour");
+export function ItemTypeForm({
+  action,
+  disabled = false,
+  defaultValues,
+  fixedType,
+  submitLabel = "+ Add item",
+}: ItemTypeFormProps) {
+  const [type, setType] = useState<CatalogItemType>(fixedType ?? defaultValues?.type ?? "pour");
+  const showTypeSelect = !fixedType;
   const showStyle = type === "pour" || type === "food" || type === "merch";
   const showAbv = type === "pour";
   const styleLabel = type === "pour" ? "Style" : "Category";
-  const typeHint = type === "event"
-    ? "Event listings can appear in mixed content feeds, but events are usually better managed from the Events screen."
-    : type === "pour"
+  const typeHint = type === "pour"
       ? "Use pours for beer, cider, wine, cocktails, or other drinks that belong on the menu."
       : type === "food"
         ? "Food items show up with your menu and can be grouped separately from drinks."
         : "Merch items are for packaged goods, glassware, apparel, and other retail items.";
-  const nameHint = type === "event"
-    ? "This title appears on internal lists and any public/event-style display cards that use this item."
-    : "This name appears on menu cards, admin lists, and any displays that include this item.";
+  const nameHint = "This name appears on menu cards, admin lists, and any displays that include this item.";
   const styleHint = type === "pour"
     ? "Shown as secondary style metadata on menus and displays when style details are enabled."
     : "Use a short grouping label like Snacks, Apparel, Glassware, or Specials.";
-  const descriptionHint = type === "event"
-    ? "Optional supporting copy for mixed content cards or internal context."
-    : "Optional public-facing copy shown when descriptions are enabled on menus and displays.";
+  const descriptionHint = "Optional public-facing copy shown when descriptions are enabled on menus and displays.";
 
   return (
     <form action={action} className="flex flex-col gap-3">
       <fieldset className="contents" disabled={disabled}>
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <FieldLabel
-              htmlFor="create-type"
-              info="Type controls where the item appears, which extra fields are shown, and how TaproomOS describes the item on public surfaces."
-            >
-              Type
-            </FieldLabel>
-            <Select
-              aria-describedby="create-type-hint"
-              defaultValue={type}
-              id="create-type"
-              name="type"
-              onChange={(e) => setType(e.target.value as ItemType)}
-            >
-              {TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-            <FieldHint id="create-type-hint">{typeHint}</FieldHint>
-          </div>
+          {showTypeSelect ? (
+            <div className="flex flex-col gap-1">
+              <FieldLabel
+                htmlFor="create-type"
+                info="Type controls where the item appears, which extra fields are shown, and how TaproomOS describes the item on public surfaces."
+              >
+                Type
+              </FieldLabel>
+              <Select
+                aria-describedby="create-type-hint"
+                defaultValue={type}
+                id="create-type"
+                name="type"
+                onChange={(e) => setType(e.target.value as CatalogItemType)}
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
+              <FieldHint id="create-type-hint">{typeHint}</FieldHint>
+            </div>
+          ) : (
+            <input name="type" type="hidden" value={type} />
+          )}
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="create-name" required>Name</FieldLabel>
             <Input
@@ -84,8 +88,7 @@ export function ItemTypeForm({ action, disabled = false, defaultValues, submitLa
               placeholder={
                 type === "pour" ? "Ironwood IPA" :
                 type === "food" ? "Pretzel Bites" :
-                type === "merch" ? "Logo Pint Glass" :
-                "Trivia Night"
+                "Logo Pint Glass"
               }
               required
             />

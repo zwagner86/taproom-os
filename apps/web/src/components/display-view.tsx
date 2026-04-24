@@ -7,7 +7,7 @@ import { formatAbv, resolveDisplayedPrice } from "@taproom/domain";
 import { Alert, Badge, Button, Card, Input, Label } from "@/components/ui";
 
 import type { Database } from "../../../../supabase/types";
-import { type DisplayContent, type DisplaySurface, applyDisplaySurfaceRules, type DisplayViewConfig } from "@/lib/displays";
+import { type DisplayContent, applyDisplaySurfaceRules, type DisplayViewConfig } from "@/lib/displays";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import { startMembershipCheckoutAction } from "@/server/actions/memberships";
@@ -27,13 +27,12 @@ type EventRecord = Database["public"]["Tables"]["events"]["Row"];
 type MembershipPlanRecord = Database["public"]["Tables"]["membership_plans"]["Row"];
 
 const GROUP_LABELS: Record<string, string> = {
-  event: "Events",
   food: "Food",
   merch: "Merch",
   pour: "Pours",
 };
 
-const TYPE_EMOJI: Record<string, string> = { event: "🎟", food: "🥨", merch: "👕", pour: "🍺" };
+const TYPE_EMOJI: Record<string, string> = { food: "🥨", merch: "👕", pour: "🍺" };
 
 export async function DisplayView({
   alerts,
@@ -149,7 +148,9 @@ function DisplayShell({
 }) {
   const isTv = config.surface === "tv";
   const isEmbed = config.surface === "embed";
-  const wrapperStyle = getShellStyle(venue, config.surface);
+  const theme = resolveDisplayTheme(venue, config);
+  const isDark = theme === "dark";
+  const wrapperStyle = getShellStyle(venue, theme);
 
   return (
     <main
@@ -169,6 +170,14 @@ function DisplayShell({
               ? "mb-7 flex items-end justify-between gap-8"
               : "mb-8 overflow-hidden rounded-[2rem] border border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,242,234,0.92))] px-5 py-6 shadow-[0_24px_70px_rgba(80,54,31,0.08)] md:px-7"
           }
+          style={isTv
+            ? undefined
+            : {
+                background: isDark
+                  ? "linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035))"
+                  : "linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,242,234,0.92))",
+                borderColor: "var(--c-border)",
+              }}
         >
           <div className="min-w-0">
             <div className="flex items-center gap-3">
@@ -178,9 +187,10 @@ function DisplayShell({
                   alt={`${venue.name} logo`}
                   className={
                     isTv
-                      ? "h-14 w-14 rounded-2xl border border-white/15 object-cover"
-                      : "h-12 w-12 rounded-2xl border border-border/70 object-cover bg-white/80"
+                      ? "h-14 w-14 rounded-2xl border object-cover"
+                      : "h-12 w-12 rounded-2xl border object-cover"
                   }
+                  style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
                   src={venue.logo_url}
                 />
               )}
@@ -188,14 +198,14 @@ function DisplayShell({
                 {config.showVenueName && (
                   <div
                     className={isTv ? "text-[13px] font-bold uppercase tracking-[0.28em]" : "text-xs font-semibold uppercase tracking-[0.22em]"}
-                    style={{ color: isTv ? "rgba(255,255,255,0.62)" : "var(--accent)" }}
+                    style={{ color: isTv ? "var(--c-muted)" : "var(--accent)" }}
                   >
                     {venue.name}
                   </div>
                 )}
                 <h1
                   className={isTv ? "text-[54px] font-black leading-none tracking-[-1.4px]" : "font-display text-4xl tracking-tight text-foreground md:text-5xl"}
-                  style={{ color: isTv ? "white" : undefined }}
+                  style={{ color: "var(--c-text)" }}
                 >
                   {title}
                 </h1>
@@ -204,7 +214,7 @@ function DisplayShell({
             {subtitle && (
               <p
                 className={isTv ? "mt-4 max-w-2xl text-[17px] leading-relaxed" : "mt-3 max-w-3xl text-sm leading-7 text-muted-foreground md:text-[15px]"}
-                style={{ color: isTv ? "rgba(255,255,255,0.68)" : "var(--c-muted)" }}
+                style={{ color: "var(--c-muted)" }}
               >
                 {subtitle}
               </p>
@@ -214,7 +224,7 @@ function DisplayShell({
           {isTv && (
             <div
               className="rounded-full border px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em]"
-              style={{ borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.72)" }}
+              style={{ borderColor: "var(--c-border)", color: "var(--c-muted)" }}
             >
               {config.aspect} layout
             </div>
@@ -247,7 +257,7 @@ function DisplayItems({
       <div className="flex flex-col gap-7">
         {grouped.map((group) => (
           <section key={group.label}>
-            <div className="mb-4 text-[13px] font-bold uppercase tracking-[0.22em]" style={{ color: "rgba(255,255,255,0.62)" }}>
+            <div className="mb-4 text-[13px] font-bold uppercase tracking-[0.22em]" style={{ color: "var(--c-muted)" }}>
               {group.label}
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -255,14 +265,14 @@ function DisplayItems({
                 <article
                   className="rounded-[22px] border p-5"
                   key={item.id}
-                  style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" }}
+                  style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <div className="mb-1 text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,0.55)" }}>
+                      <div className="mb-1 text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--c-muted)" }}>
                         {TYPE_EMOJI[item.type] ?? "•"} {GROUP_LABELS[item.type] ?? item.type}
                       </div>
-                      <h2 className="text-[27px] font-black leading-tight" style={{ fontFamily: "Lora, serif", color: "white" }}>
+                      <h2 className="text-[27px] font-black leading-tight" style={{ fontFamily: "Lora, serif", color: "var(--c-text)" }}>
                         {item.name}
                       </h2>
                     </div>
@@ -273,12 +283,12 @@ function DisplayItems({
                     )}
                   </div>
                   {buildItemMeta(item, config) && (
-                    <div className="text-[14px]" style={{ color: "rgba(255,255,255,0.66)" }}>
+                    <div className="text-[14px]" style={{ color: "var(--c-muted)" }}>
                       {buildItemMeta(item, config)}
                     </div>
                   )}
                   {config.showDescriptions && item.description && (
-                    <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.74)" }}>
+                    <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
                       {item.description}
                     </p>
                   )}
@@ -292,17 +302,21 @@ function DisplayItems({
   }
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-border/80 bg-white/92 shadow-[0_18px_48px_rgba(80,54,31,0.06)]">
+    <div
+      className="overflow-hidden rounded-[2rem] border shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
+      style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
+    >
       {grouped.map((group, groupIndex) => (
-        <section className={groupIndex > 0 ? "border-t border-border/70" : ""} key={group.label}>
-          <div className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+        <section className={groupIndex > 0 ? "border-t" : ""} key={group.label} style={{ borderColor: "var(--c-border)" }}>
+          <div className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--c-muted)" }}>
             {group.label}
           </div>
           <div className="px-5">
             {group.items.map((item, index) => (
               <article
-                className={index > 0 ? "border-t border-border/70 py-4" : "py-4"}
+                className={index > 0 ? "border-t py-4" : "py-4"}
                 key={item.id}
+                style={{ borderColor: "var(--c-border)" }}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -358,16 +372,16 @@ function DisplayEvents({
           <article
             className="rounded-[22px] border p-5"
             key={event.id}
-            style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" }}
+            style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
           >
             <div className="mb-3 text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
               {formatDate(event.starts_at)}
             </div>
-            <h2 className="text-[27px] font-black leading-tight" style={{ color: "white", fontFamily: "Lora, serif" }}>
+            <h2 className="text-[27px] font-black leading-tight" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
               {event.title}
             </h2>
             {config.showDescriptions && event.description && (
-              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.74)" }}>
+              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
                 {event.description}
               </p>
             )}
@@ -387,10 +401,10 @@ function DisplayEvents({
   return (
     <div className="flex flex-col gap-4">
       {events.map((event) => (
-        <Card
-          className="border-border/80 bg-white/92 shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
+          <Card
+          className="shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
           key={event.id}
-          style={{ display: "flex", gap: 16, alignItems: "flex-start" }}
+          style={{ alignItems: "flex-start", background: "var(--c-card)", borderColor: "var(--c-border)", display: "flex", gap: 16 }}
         >
           <div
             className="flex-shrink-0 rounded-[16px] py-3 text-center"
@@ -462,22 +476,22 @@ function DisplayMemberships({
           <article
             className="rounded-[22px] border p-5"
             key={plan.id}
-            style={{ background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" }}
+            style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
           >
             <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
               {venue.membership_label}
             </div>
-            <h2 className="text-[26px] font-black" style={{ color: "white", fontFamily: "Lora, serif" }}>
+            <h2 className="text-[26px] font-black" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
               {plan.name}
             </h2>
-            <div className="mt-2 text-[26px] font-black" style={{ color: "white" }}>
+            <div className="mt-2 text-[26px] font-black" style={{ color: "var(--c-text)" }}>
               {formatCurrency(plan.price_cents, plan.currency)}
-              <span className="ml-1 text-[13px] font-medium uppercase tracking-[0.1em]" style={{ color: "rgba(255,255,255,0.64)" }}>
+              <span className="ml-1 text-[13px] font-medium uppercase tracking-[0.1em]" style={{ color: "var(--c-muted)" }}>
                 / {plan.billing_interval}
               </span>
             </div>
             {config.showDescriptions && plan.description && (
-              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.74)" }}>
+              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
                 {plan.description}
               </p>
             )}
@@ -495,11 +509,12 @@ function DisplayMemberships({
 
         return (
           <Card
-            className="border-border/80 bg-white/92 shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
+            className="shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
             key={plan.id}
+            style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
           >
             <div className="mb-4">
-              <div className="mb-1 font-display text-2xl tracking-tight text-foreground">
+              <div className="mb-1 font-display text-2xl tracking-tight" style={{ color: "var(--c-text)" }}>
                 {plan.name}
               </div>
               <div className="mb-2 flex items-baseline gap-1">
@@ -570,17 +585,11 @@ function DisplayEmptyState({
   return (
     <div
       className="rounded-[2rem] border px-6 py-10 text-center shadow-[0_18px_48px_rgba(80,54,31,0.04)]"
-      style={config.surface === "tv"
-        ? {
-            background: "rgba(255,255,255,0.06)",
-            borderColor: "rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.72)",
-          }
-        : {
-            background: "rgba(255,255,255,0.92)",
-            borderColor: "var(--c-border)",
-            color: "var(--c-muted)",
-          }}
+      style={{
+        background: "var(--c-card)",
+        borderColor: "var(--c-border)",
+        color: "var(--c-muted)",
+      }}
     >
       <div className="mb-2 text-[34px]">{emoji}</div>
       <p className="text-[14px]">{message}</p>
@@ -609,7 +618,7 @@ function groupItems(items: ItemRecord[], content: DisplayContent) {
     return [{ label: "Kitchen", items }];
   }
 
-  const order = ["pour", "food", "merch", "event"];
+  const order = ["pour", "food", "merch"];
   return order
     .map((type) => ({
       items: items.filter((item) => item.type === type),
@@ -641,8 +650,9 @@ function buildItemMeta(item: ItemRecord, config: DisplayViewConfig) {
 function getDisplayTitle(venue: VenueRow, content: DisplayContent) {
   switch (content) {
     case "drinks":
+      return "Drinks";
     case "menu":
-      return venue.menu_label;
+      return "Full Menu";
     case "food":
       return "Food Menu";
     case "events":
@@ -667,16 +677,33 @@ function getPublicReturnPath(venueSlug: string, content: DisplayContent) {
   }
 }
 
-function getShellStyle(venue: VenueRow, surface: DisplaySurface): CSSProperties {
+function resolveDisplayTheme(venue: VenueRow, config: DisplayViewConfig) {
+  if (config.theme === "light" || config.theme === "dark") {
+    return config.theme;
+  }
+
+  return venue.display_theme === "dark" ? "dark" : "light";
+}
+
+function getShellStyle(venue: VenueRow, theme: "light" | "dark"): CSSProperties {
   const accent = venue.accent_color || "#C96B2C";
+  const secondaryAccent = venue.secondary_accent_color || "#2E9F9A";
+  const isDark = theme === "dark";
 
   return {
     "--accent": accent,
+    "--accent-secondary": secondaryAccent,
     "--accent-dark": `color-mix(in srgb, ${accent} 72%, black)`,
     "--accent-light": `color-mix(in srgb, ${accent} 14%, white)`,
-    background: surface === "tv"
-      ? "radial-gradient(circle at top left, rgba(255,255,255,0.06), transparent 38%), linear-gradient(180deg, oklch(16% 0.02 55), oklch(10% 0.02 55))"
+    "--c-bg": isDark ? "oklch(14% 0.02 55)" : "oklch(97% 0.008 75)",
+    "--c-bg2": isDark ? "oklch(20% 0.025 55)" : "oklch(94% 0.01 75)",
+    "--c-border": isDark ? "rgba(255,255,255,0.13)" : "oklch(88% 0.012 70)",
+    "--c-card": isDark ? "rgba(255,255,255,0.065)" : "rgba(255,255,255,0.92)",
+    "--c-muted": isDark ? "rgba(255,255,255,0.66)" : "oklch(52% 0.015 70)",
+    "--c-text": isDark ? "white" : "oklch(18% 0.02 60)",
+    background: isDark
+      ? `radial-gradient(circle at top left, color-mix(in srgb, ${secondaryAccent} 16%, transparent), transparent 38%), linear-gradient(180deg, var(--c-bg2), var(--c-bg))`
       : "transparent",
-    color: surface === "tv" ? "white" : undefined,
+    color: "var(--c-text)",
   } as CSSProperties;
 }

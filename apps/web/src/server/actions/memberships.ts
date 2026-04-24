@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import type { Database } from "../../../../../supabase/types";
 import { getEnv } from "@/env";
 import { isDemoVenueRecord } from "@/lib/demo-venue";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import { slugify } from "@/lib/utils";
 import { redirectForDemoVenue } from "@/server/demo-venue";
@@ -75,6 +76,28 @@ export async function updateMembershipPlanAction(venueSlug: string, formData: Fo
 
   revalidateMembershipPaths(venueSlug);
   redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent(warning ?? "Membership plan updated.")}`);
+}
+
+export async function updateMembershipProgramNameAction(venueSlug: string, formData: FormData) {
+  const access = await requireVenueAccess(venueSlug);
+
+  if (access.isDemoVenue) {
+    redirectForDemoVenue(`/app/${venueSlug}/memberships`);
+  }
+
+  const membershipLabel = String(formData.get("membership_label") ?? access.venue.membership_label).trim() || "Club";
+  const supabase = await createServerSupabaseClient();
+  const updates: Database["public"]["Tables"]["venues"]["Update"] = {
+    membership_label: membershipLabel,
+  };
+  const { error } = await supabase.from("venues").update(updates).eq("id", access.venue.id);
+
+  if (error) {
+    redirect(`/app/${venueSlug}/memberships?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidateMembershipPaths(venueSlug);
+  redirect(`/app/${venueSlug}/memberships?message=${encodeURIComponent("Membership program name saved.")}`);
 }
 
 export async function startMembershipCheckoutAction(venueSlug: string, planId: string, formData: FormData) {

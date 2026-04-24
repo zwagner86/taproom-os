@@ -10,11 +10,13 @@ export const savedDisplaySurfaceSchema = z.enum(["embed", "tv"]);
 export const displayDensitySchema = z.enum(["comfortable", "compact"]);
 export const displayAspectSchema = z.enum(["auto", "landscape", "portrait"]);
 export const displayLinkTargetSchema = z.enum(["same-tab", "new-tab"]);
+export const displayThemeSchema = z.enum(["venue-default", "light", "dark"]);
 export const displayTransitionSchema = z.literal("fade");
 
 export const displayViewOptionsSchema = z.object({
   density: displayDensitySchema.default("comfortable"),
   aspect: displayAspectSchema.default("auto"),
+  theme: displayThemeSchema.default("venue-default"),
   showVenueName: z.boolean().default(true),
   showLogo: z.boolean().default(true),
   showTagline: z.boolean().default(true),
@@ -49,6 +51,7 @@ export type SavedDisplaySurface = z.infer<typeof savedDisplaySurfaceSchema>;
 export type DisplayDensity = z.infer<typeof displayDensitySchema>;
 export type DisplayAspect = z.infer<typeof displayAspectSchema>;
 export type DisplayLinkTarget = z.infer<typeof displayLinkTargetSchema>;
+export type DisplayTheme = z.infer<typeof displayThemeSchema>;
 export type DisplayTransition = z.infer<typeof displayTransitionSchema>;
 export type DisplayViewOptions = z.infer<typeof displayViewOptionsSchema>;
 export type DisplayViewConfig = z.infer<typeof displayViewConfigSchema>;
@@ -98,6 +101,12 @@ export const DISPLAY_SURFACE_LABELS: Record<DisplaySurface, string> = {
   tv: "TV Display",
 };
 
+export const DISPLAY_THEME_LABELS: Record<DisplayTheme, string> = {
+  "venue-default": "Venue default",
+  dark: "Dark",
+  light: "Light",
+};
+
 const CANONICAL_PUBLIC_PATHS: Record<DisplayContent, string> = {
   drinks: "drinks",
   events: "events",
@@ -112,6 +121,7 @@ export function getDefaultDisplayViewOptions(surface: DisplaySurface, content: D
     content,
     density: surface === "tv" || surface === "embed" ? "compact" : "comfortable",
     linkTarget: surface === "embed" ? "new-tab" : "same-tab",
+    theme: "venue-default",
     showAbv: true,
     showCtas: content === "events" || content === "memberships",
     showDescriptions: true,
@@ -162,6 +172,7 @@ export function extractDisplayViewOptions(config: DisplayViewConfig): DisplayVie
     aspect: config.aspect,
     density: config.density,
     linkTarget: config.linkTarget,
+    theme: config.theme,
     showAbv: config.showAbv,
     showCtas: config.showCtas,
     showDescriptions: config.showDescriptions,
@@ -241,6 +252,7 @@ export function parseDisplayViewConfigFromSearchParams(
     content: parseEnumValue(displayContentSchema, getParam(searchParams, "content")),
     density: parseEnumValue(displayDensitySchema, getParam(searchParams, "density")),
     linkTarget: parseEnumValue(displayLinkTargetSchema, getParam(searchParams, "linkTarget")),
+    theme: parseEnumValue(displayThemeSchema, getParam(searchParams, "theme")),
     showAbv: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showAbv)),
     showCtas: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showCtas)),
     showDescriptions: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showDescriptions)),
@@ -280,6 +292,7 @@ export function serializeDisplayViewConfigToSearchParams(
   appendParam(params, "density", config.density, defaults?.density);
   appendParam(params, "aspect", config.aspect, defaults?.aspect);
   appendParam(params, "linkTarget", config.linkTarget, defaults?.linkTarget);
+  appendParam(params, "theme", config.theme, defaults?.theme);
 
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showVenueName, config.showVenueName, defaults?.showVenueName);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showLogo, config.showLogo, defaults?.showLogo);

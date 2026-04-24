@@ -22,6 +22,7 @@ describe("display helpers", () => {
       showDescriptions: false,
       showLogo: false,
       showVenueName: false,
+      theme: "dark" as const,
     };
 
     const searchParams = serializeDisplayViewConfigToSearchParams(config);
@@ -62,6 +63,19 @@ describe("display helpers", () => {
     expect(options.showFollowCard).toBe(false);
     expect(options.showMembershipForm).toBe(false);
     expect(options.linkTarget).toBe("new-tab");
+    expect(options.theme).toBe("venue-default");
+  });
+
+  it("hydrates legacy display configs with venue-default theme", () => {
+    const config = parseDisplayViewConfigFromSearchParams(
+      {},
+      {
+        ...getDefaultDisplayViewConfig("public", "menu"),
+        theme: undefined as never,
+      },
+    );
+
+    expect(config.theme).toBe("venue-default");
   });
 
   it("builds ad hoc, saved, and canonical public paths", () => {

@@ -194,13 +194,11 @@ export function DemoVenueSquarePage({
                                 style={{ flex: 1 }}
                               >
                                 <option disabled value="">Link to item…</option>
-                                {items
-                                  .filter((item) => item.type !== "event")
-                                  .map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                      {item.name}
-                                    </option>
-                                  ))}
+                                {items.map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.name}
+                                  </option>
+                                ))}
                               </Select>
                               <Button size="sm" type="submit">Link</Button>
                             </div>
