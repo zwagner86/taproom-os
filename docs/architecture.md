@@ -31,7 +31,7 @@ The schema in `supabase/migrations` covers the planned MVP surface:
 - Every tenant-owned table carries `venue_id`.
 - RLS is enabled on tenant tables.
 - Authenticated users gain access through `venue_users`.
-- Platform admins are recognized through either the `platform_admins` table or the `PLATFORM_ADMIN_EMAILS` bootstrap env.
+- Platform admins are recognized through either the `platform_admins` table or a matching signed-in email in the `PLATFORM_ADMIN_EMAILS` bootstrap env.
 - Public reads are limited to published or active venue content.
 
 ## MVP choices
@@ -41,4 +41,3 @@ The schema in `supabase/migrations` covers the planned MVP surface:
 - TaproomOS owns item records; Square becomes an optional linked source.
 - Distribution starts with iframe embeds and dynamic SSR pages.
 - No queueing, webhook orchestration, or advanced cache invalidation yet.
-

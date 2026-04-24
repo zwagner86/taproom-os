@@ -2,11 +2,10 @@ export const dynamic = "force-dynamic";
 
 import type { Route } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { Alert, Badge, Button, Card, EmptyState, FieldHint, FieldLabel, Input, PageHeader, Select } from "@/components/ui";
 import { createVenueAsPlatformAction } from "@/server/actions/venues";
-import { isPlatformAdmin, requireUser } from "@/server/auth";
+import { requirePlatformAdmin } from "@/server/auth";
 import { listVenuesForUser } from "@/server/repositories/venues";
 
 export default async function InternalVenuesPage({
@@ -14,17 +13,15 @@ export default async function InternalVenuesPage({
 }: {
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
-  const user = await requireUser();
-  const admin = await isPlatformAdmin();
-
-  if (!admin) {
-    redirect("/");
-  }
+  const user = await requirePlatformAdmin();
 
   const [venues, { error, message }] = await Promise.all([listVenuesForUser(user), searchParams]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+      <Button asChild className="mb-4" size="sm" variant="ghost">
+        <Link href="/internal">Back to internal</Link>
+      </Button>
       <PageHeader
         subtitle="Create venue shells and optionally invite owners."
         title="Venue provisioning"
@@ -129,7 +126,7 @@ export default async function InternalVenuesPage({
                   </div>
                 </div>
                 <Button asChild size="sm" variant="secondary">
-                  <Link href={`/internal/venues/${venue.slug}/impersonate` as Route}>Open</Link>
+                  <Link href={`/internal/venues/${venue.slug}/impersonate` as Route}>Impersonate</Link>
                 </Button>
               </Card>
             ))

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import {
+  ArrowLeft,
   ChevronDown,
   ExternalLink,
   LayoutDashboard,
@@ -31,6 +32,8 @@ type AppShellProps = {
   groups: NavGroup[];
   currentScreenLabel?: string;
   demoMode?: boolean;
+  internalHref?: string;
+  platformAdminMode?: boolean;
 };
 
 export function AppShell({
@@ -43,6 +46,8 @@ export function AppShell({
   groups,
   currentScreenLabel,
   demoMode = false,
+  internalHref,
+  platformAdminMode = false,
 }: AppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -82,9 +87,11 @@ export function AppShell({
             collapsed={collapsed}
             expanded={expanded}
             groups={groups}
+            internalHref={internalHref}
             onNavigate={handleNavigate}
             onToggleGroup={toggleGroup}
             pathname={pathname}
+            platformAdminMode={platformAdminMode}
             userInitials={userInitials}
             userLabel={userLabel}
             venueName={venueName}
@@ -106,9 +113,11 @@ export function AppShell({
                 collapsed={false}
                 expanded={expanded}
                 groups={groups}
+                internalHref={internalHref}
                 onNavigate={handleNavigate}
                 onToggleGroup={toggleGroup}
                 pathname={pathname}
+                platformAdminMode={platformAdminMode}
                 userInitials={userInitials}
                 userLabel={userLabel}
                 venueName={venueName}
@@ -153,10 +162,20 @@ export function AppShell({
               <Badge className="hidden sm:inline-flex capitalize" variant="accent">
                 {venueType}
               </Badge>
+              {platformAdminMode && (
+                <Badge className="hidden sm:inline-flex" variant="info">
+                  Platform admin
+                </Badge>
+              )}
               {demoMode && (
                 <Badge className="hidden sm:inline-flex" variant="warning">
                   Demo mode
                 </Badge>
+              )}
+              {platformAdminMode && internalHref && (
+                <Button asChild className="hidden md:inline-flex" size="sm" variant="ghost">
+                  <Link href={internalHref as `/${string}`}>Back to internal</Link>
+                </Button>
               )}
               <div className="hidden rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground md:block">
                 {venueSlug}.taproomos.com
@@ -188,9 +207,11 @@ function ShellNav({
   collapsed,
   expanded,
   groups,
+  internalHref,
   onNavigate,
   onToggleGroup,
   pathname,
+  platformAdminMode,
   userInitials,
   userLabel,
   venueName,
@@ -200,9 +221,11 @@ function ShellNav({
   collapsed: boolean;
   expanded: Record<string, boolean>;
   groups: NavGroup[];
+  internalHref?: string;
   onNavigate: () => void;
   onToggleGroup: (id: string) => void;
   pathname: string;
+  platformAdminMode: boolean;
   userInitials: string;
   userLabel: string;
   venueName: string;
@@ -306,20 +329,32 @@ function ShellNav({
                 <div className="truncate text-sm font-medium text-white/90">{userLabel}</div>
                 <div className="mt-1 flex items-center gap-1 text-xs text-white/50">
                   <LayoutDashboard className="h-3.5 w-3.5" />
-                  <span>Venue admin access</span>
+                  <span>{platformAdminMode ? "Platform admin access" : "Venue admin access"}</span>
                 </div>
               </div>
             )}
           </div>
           {!collapsed && (
-            <Link
-              className="mt-3 flex items-center gap-2 text-xs font-medium text-white/55 transition-colors hover:text-white"
-              href={`/v/${venueSlug}` as `/${string}`}
-              onClick={onNavigate}
-            >
-              <span>Open public venue</span>
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Link>
+            <div className="mt-3 flex flex-col gap-2">
+              {platformAdminMode && internalHref && (
+                <Link
+                  className="flex items-center gap-2 text-xs font-medium text-white/55 transition-colors hover:text-white"
+                  href={internalHref as `/${string}`}
+                  onClick={onNavigate}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Back to internal</span>
+                </Link>
+              )}
+              <Link
+                className="flex items-center gap-2 text-xs font-medium text-white/55 transition-colors hover:text-white"
+                href={`/v/${venueSlug}` as `/${string}`}
+                onClick={onNavigate}
+              >
+                <span>Open public venue</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           )}
         </div>
       </div>

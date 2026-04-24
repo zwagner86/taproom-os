@@ -45,6 +45,8 @@ export default async function VenueLayout({
       currentUserId={user.id}
       demoMode={access.isDemoVenue}
       groups={groups}
+      internalHref={access.isPlatformAdmin ? "/internal" : undefined}
+      platformAdminMode={access.isPlatformAdmin}
       userInitials={initials || "JD"}
       userLabel={user.email ?? "Venue Admin"}
       venue={venueRecord}

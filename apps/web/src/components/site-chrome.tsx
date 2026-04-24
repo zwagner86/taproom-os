@@ -32,10 +32,15 @@ export async function SiteChrome() {
 
           {user ? (
             <>
+              {admin && (
+                <Button asChild size="sm" variant="ghost">
+                  <Link href="/internal">Internal</Link>
+                </Button>
+              )}
               <Button asChild className="hidden sm:inline-flex" size="sm" variant="ghost">
                 <Link href="/">Dashboard</Link>
               </Button>
-              {admin && <Badge variant="accent">Admin</Badge>}
+              {admin && <Badge variant="accent">Platform admin</Badge>}
               <span className="hidden max-w-52 truncate text-sm text-muted-foreground lg:inline">
                 {user.email}
               </span>

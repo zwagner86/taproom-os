@@ -37,7 +37,7 @@ The repo currently implements:
 1. Copy `.env.example` to `.env.local`.
 2. Create a Supabase project and set the public URL, publishable key, and secret key.
 3. Apply the SQL in `supabase/migrations` to your Supabase database in order.
-4. Optionally run `supabase/seed.sql` for the demo venue and public menu data.
+4. Optionally run `supabase/seed.sql` for the `demo-taproom` venue, sample menu/events/membership data, and seeded display views/playlists.
 5. Install dependencies with `pnpm install`.
 6. Run `pnpm dev`.
 7. Create an account at `/signup`, then create a venue at `/onboarding`.

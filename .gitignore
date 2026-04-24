@@ -14,3 +14,4 @@ node_modules
 apps/web/.dev.vars
 supabase/.temp/
 apps/web/tsconfig.tsbuildinfo
+supabase/.branches/_current_branch

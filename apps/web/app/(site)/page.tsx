@@ -116,7 +116,7 @@ export default async function HomePage() {
             </Button>
             {admin && (
               <Button asChild variant="ghost">
-                <Link href="/internal/venues">Internal tools</Link>
+                <Link href="/internal">Internal</Link>
               </Button>
             )}
           </div>

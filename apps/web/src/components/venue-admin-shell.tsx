@@ -14,6 +14,8 @@ export function VenueAdminShell({
   currentUserId,
   demoMode,
   groups,
+  internalHref,
+  platformAdminMode,
   userInitials,
   userLabel,
   venue,
@@ -22,13 +24,22 @@ export function VenueAdminShell({
   currentUserId: string | null;
   demoMode: boolean;
   groups: NavGroup[];
+  internalHref?: string;
+  platformAdminMode: boolean;
   userInitials: string;
   userLabel: string;
   venue: VenueRow;
 }) {
   return (
     <DemoVenueProvider currentUserId={currentUserId} demoMode={demoMode} initialVenue={venue}>
-      <VenueAdminShellFrame groups={groups} userInitials={userInitials} userLabel={userLabel} venue={venue}>
+      <VenueAdminShellFrame
+        groups={groups}
+        internalHref={internalHref}
+        platformAdminMode={platformAdminMode}
+        userInitials={userInitials}
+        userLabel={userLabel}
+        venue={venue}
+      >
         {children}
       </VenueAdminShellFrame>
     </DemoVenueProvider>
@@ -38,12 +49,16 @@ export function VenueAdminShell({
 function VenueAdminShellFrame({
   children,
   groups,
+  internalHref,
+  platformAdminMode,
   userInitials,
   userLabel,
   venue,
 }: {
   children: ReactNode;
   groups: NavGroup[];
+  internalHref?: string;
+  platformAdminMode: boolean;
   userInitials: string;
   userLabel: string;
   venue: VenueRow;
@@ -55,6 +70,8 @@ function VenueAdminShellFrame({
     <AppShell
       demoMode={demoMode}
       groups={groups}
+      internalHref={internalHref}
+      platformAdminMode={platformAdminMode}
       userInitials={userInitials}
       userLabel={userLabel}
       venueName={currentVenue.name}

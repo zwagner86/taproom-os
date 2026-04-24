@@ -9,9 +9,10 @@ import { signUpWithPasswordAction } from "@/server/actions/auth";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
+  const nextParams = next ? `?next=${encodeURIComponent(next)}` : "";
 
   return (
     <AuthLayout subtitle="Start managing your taproom in minutes." title="Create your account">
@@ -19,6 +20,7 @@ export default async function SignupPage({
         {error && <Alert variant="error">{error}</Alert>}
 
         <form action={signUpWithPasswordAction} className="space-y-4">
+          <input name="next" type="hidden" value={next ?? "/"} />
           <div className="space-y-1.5">
             <Label htmlFor="signup-email">
               Email address <span className="text-primary">*</span>
@@ -46,7 +48,7 @@ export default async function SignupPage({
 
         <div className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link className="font-semibold text-primary" href="/login">
+          <Link className="font-semibold text-primary" href={`/login${nextParams}`}>
             Log in
           </Link>
         </div>

@@ -13,6 +13,13 @@ export default async function LoginPage({
 }) {
   const { error, message, next, mode } = await searchParams;
   const isMagic = mode === "magic";
+  const nextParams = next ? `?next=${encodeURIComponent(next)}` : "";
+  const magicParams = new URLSearchParams();
+
+  magicParams.set("mode", "magic");
+  if (next) {
+    magicParams.set("next", next);
+  }
 
   return (
     <AuthLayout subtitle="Log in to your TaproomOS account." title="Welcome back">
@@ -32,7 +39,7 @@ export default async function LoginPage({
                       ? "bg-background font-semibold text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
-                  href={value === "magic" ? "/login?mode=magic" : "/login"}
+                  href={value === "magic" ? `/login?${magicParams.toString()}` : `/login${nextParams}`}
                   key={value}
                 >
                   {value === "password" ? "Password" : "Magic link"}
@@ -75,7 +82,7 @@ export default async function LoginPage({
 
         <div className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link className="font-semibold text-primary" href="/signup">
+          <Link className="font-semibold text-primary" href={`/signup${nextParams}`}>
             Sign up
           </Link>
         </div>

@@ -630,4 +630,306 @@ values
     ((date_trunc('day', now() at time zone 'utc') - interval '2 days') at time zone 'utc')
   );
 
+insert into public.display_views (
+  id,
+  venue_id,
+  content,
+  surface,
+  name,
+  slug,
+  config
+)
+values
+  (
+    '99999999-9999-9999-9999-999999999901',
+    '11111111-1111-1111-1111-111111111111',
+    'menu',
+    'public',
+    null,
+    null,
+    $${
+      "aspect": "auto",
+      "density": "comfortable",
+      "linkTarget": "same-tab",
+      "showAbv": true,
+      "showCtas": false,
+      "showDescriptions": true,
+      "showFollowCard": true,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": true,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999902',
+    '11111111-1111-1111-1111-111111111111',
+    'drinks',
+    'public',
+    null,
+    null,
+    $${
+      "aspect": "auto",
+      "density": "comfortable",
+      "linkTarget": "same-tab",
+      "showAbv": true,
+      "showCtas": false,
+      "showDescriptions": true,
+      "showFollowCard": true,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": true,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999903',
+    '11111111-1111-1111-1111-111111111111',
+    'food',
+    'public',
+    null,
+    null,
+    $${
+      "aspect": "auto",
+      "density": "comfortable",
+      "linkTarget": "same-tab",
+      "showAbv": false,
+      "showCtas": false,
+      "showDescriptions": true,
+      "showFollowCard": true,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": true,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999904',
+    '11111111-1111-1111-1111-111111111111',
+    'events',
+    'public',
+    null,
+    null,
+    $${
+      "aspect": "auto",
+      "density": "comfortable",
+      "linkTarget": "same-tab",
+      "showAbv": true,
+      "showCtas": true,
+      "showDescriptions": true,
+      "showFollowCard": true,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": true,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999905',
+    '11111111-1111-1111-1111-111111111111',
+    'memberships',
+    'public',
+    null,
+    null,
+    $${
+      "aspect": "auto",
+      "density": "comfortable",
+      "linkTarget": "same-tab",
+      "showAbv": true,
+      "showCtas": true,
+      "showDescriptions": true,
+      "showFollowCard": true,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": true,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999906',
+    '11111111-1111-1111-1111-111111111111',
+    'drinks',
+    'tv',
+    'Tap List TV',
+    'tap-list-tv',
+    $${
+      "aspect": "landscape",
+      "density": "compact",
+      "linkTarget": "same-tab",
+      "showAbv": true,
+      "showCtas": false,
+      "showDescriptions": false,
+      "showFollowCard": false,
+      "showLogo": false,
+      "showMembershipForm": false,
+      "showPrices": false,
+      "showStyleMeta": true,
+      "showTagline": false,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999907',
+    '11111111-1111-1111-1111-111111111111',
+    'food',
+    'tv',
+    'Food Menu TV',
+    'food-menu-tv',
+    $${
+      "aspect": "landscape",
+      "density": "compact",
+      "linkTarget": "same-tab",
+      "showAbv": false,
+      "showCtas": false,
+      "showDescriptions": false,
+      "showFollowCard": false,
+      "showLogo": false,
+      "showMembershipForm": false,
+      "showPrices": false,
+      "showStyleMeta": true,
+      "showTagline": false,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999908',
+    '11111111-1111-1111-1111-111111111111',
+    'events',
+    'tv',
+    'Events Spotlight TV',
+    'events-spotlight-tv',
+    $${
+      "aspect": "landscape",
+      "density": "compact",
+      "linkTarget": "same-tab",
+      "showAbv": true,
+      "showCtas": false,
+      "showDescriptions": true,
+      "showFollowCard": false,
+      "showLogo": false,
+      "showMembershipForm": false,
+      "showPrices": false,
+      "showStyleMeta": true,
+      "showTagline": false,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999909',
+    '11111111-1111-1111-1111-111111111111',
+    'menu',
+    'embed',
+    'Full Menu Embed',
+    'full-menu-embed',
+    $${
+      "aspect": "auto",
+      "density": "compact",
+      "linkTarget": "new-tab",
+      "showAbv": true,
+      "showCtas": false,
+      "showDescriptions": true,
+      "showFollowCard": false,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": false,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999910',
+    '11111111-1111-1111-1111-111111111111',
+    'events',
+    'embed',
+    'Upcoming Events Embed',
+    'upcoming-events-embed',
+    $${
+      "aspect": "auto",
+      "density": "compact",
+      "linkTarget": "new-tab",
+      "showAbv": true,
+      "showCtas": true,
+      "showDescriptions": true,
+      "showFollowCard": false,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": false,
+      "showVenueName": true
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999911',
+    '11111111-1111-1111-1111-111111111111',
+    'memberships',
+    'embed',
+    'Mug Club Embed',
+    'mug-club-embed',
+    $${
+      "aspect": "auto",
+      "density": "compact",
+      "linkTarget": "new-tab",
+      "showAbv": true,
+      "showCtas": true,
+      "showDescriptions": true,
+      "showFollowCard": false,
+      "showLogo": true,
+      "showMembershipForm": false,
+      "showPrices": true,
+      "showStyleMeta": true,
+      "showTagline": false,
+      "showVenueName": true
+    }$$::jsonb
+  );
+
+insert into public.display_playlists (
+  id,
+  venue_id,
+  surface,
+  name,
+  slug,
+  config
+)
+values
+  (
+    '99999999-9999-9999-9999-999999999921',
+    '11111111-1111-1111-1111-111111111111',
+    'tv',
+    'Main Floor Rotation',
+    'main-floor-rotation',
+    $${
+      "slides": [
+        { "durationSeconds": 15, "transition": "fade", "viewId": "99999999-9999-9999-9999-999999999906" },
+        { "durationSeconds": 15, "transition": "fade", "viewId": "99999999-9999-9999-9999-999999999907" },
+        { "durationSeconds": 12, "transition": "fade", "viewId": "99999999-9999-9999-9999-999999999908" }
+      ]
+    }$$::jsonb
+  ),
+  (
+    '99999999-9999-9999-9999-999999999922',
+    '11111111-1111-1111-1111-111111111111',
+    'embed',
+    'Homepage Rotation',
+    'homepage-rotation',
+    $${
+      "slides": [
+        { "durationSeconds": 12, "transition": "fade", "viewId": "99999999-9999-9999-9999-999999999909" },
+        { "durationSeconds": 10, "transition": "fade", "viewId": "99999999-9999-9999-9999-999999999910" },
+        { "durationSeconds": 10, "transition": "fade", "viewId": "99999999-9999-9999-9999-999999999911" }
+      ]
+    }$$::jsonb
+  );
+
 commit;
