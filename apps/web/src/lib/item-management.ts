@@ -1,4 +1,5 @@
 export type CatalogItemType = "pour" | "food" | "merch";
+export type CatalogItemStatus = "active" | "coming_soon" | "hidden";
 
 export type ItemSectionConfig = {
   description: string;
@@ -13,9 +14,9 @@ export const ITEM_SECTION_CONFIGS: ItemSectionConfig[] = [
   {
     description: "Drinks that appear on tap lists, menus, and pour-focused displays.",
     emptyDescription: "Add the first drink or tap list item for this venue.",
-    label: "Pours",
+    label: "Drinks",
     newLabel: "New pour",
-    singularLabel: "pour",
+    singularLabel: "drink",
     type: "pour",
   },
   {
@@ -48,3 +49,15 @@ export function groupCatalogItems<T extends { type: string }>(items: T[]) {
     ]),
   ) as Record<CatalogItemType, T[]>;
 }
+
+export const ITEM_STATUS_LABELS: Record<CatalogItemStatus, string> = {
+  active: "Published",
+  coming_soon: "Coming soon",
+  hidden: "Hidden",
+};
+
+export const DEFAULT_MENU_SECTION_NAMES: Record<CatalogItemType, string> = {
+  food: "Food",
+  merch: "Merch",
+  pour: "Drinks",
+};

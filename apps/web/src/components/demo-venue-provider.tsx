@@ -162,19 +162,26 @@ export function DemoVenueProvider({
     const items = currentState.items ?? [];
     const nextDisplayOrder = items.reduce((maxOrder, item) => Math.max(maxOrder, item.display_order), 0) + 1;
     const now = new Date().toISOString();
+    const itemId = createDemoId("item");
 
     dispatch({
       item: {
         abv: parseOptionalNumber(formData.get("abv")),
-        active: true,
+        active: String(formData.get("status") ?? "active") !== "hidden",
         created_at: now,
         description: normalizeOptionalString(formData.get("description")),
         display_order: parseOptionalInteger(formData.get("display_order")) ?? nextDisplayOrder,
-        id: createDemoId("item"),
+        id: itemId,
         image_url: normalizeOptionalString(formData.get("image_url")),
         item_external_links: [],
+        item_servings: createDemoServings(formData, itemId, venue.id, now),
+        menu_section_id: normalizeOptionalString(formData.get("menu_section_id")),
+        menu_sections: null,
         name: String(formData.get("name") ?? "").trim(),
         price_source: "unpriced",
+        producer_location: normalizeOptionalString(formData.get("producer_location")),
+        producer_name: normalizeOptionalString(formData.get("producer_name")),
+        status: parseItemStatus(formData.get("status")),
         style_or_category: normalizeOptionalString(formData.get("style_or_category")),
         type: String(formData.get("type") ?? "pour") as DemoItemRecord["type"],
         updated_at: now,
@@ -197,6 +204,7 @@ export function DemoVenueProvider({
       item: {
         ...item,
         active,
+        status: active ? "active" : "hidden",
         updated_at: new Date().toISOString(),
       },
       type: "upsert_item",
@@ -850,6 +858,62 @@ function parseOptionalNumber(value: FormDataEntryValue | null) {
 
   const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseItemStatus(value: FormDataEntryValue | null): DemoItemRecord["status"] {
+  const normalized = String(value ?? "active").trim();
+  return normalized === "coming_soon" || normalized === "hidden" ? normalized : "active";
+}
+
+function parseOptionalMoneyCents(value: FormDataEntryValue | null) {
+  const parsed = parseOptionalNumber(value);
+  return parsed === null ? null : Math.round(parsed * 100);
+}
+
+function createDemoServings(formData: FormData, itemId: string, venueId: string, now: string): DemoItemRecord["item_servings"] {
+  const labels = formData.getAll("serving_label").map((value) => String(value).trim());
+  const rows = labels
+    .map((label, index) => ({
+      active: formData.getAll("serving_active")[index] !== "off",
+      created_at: now,
+      currency: normalizeCurrency(formData.getAll("serving_currency")[index] ?? null),
+      display_order: index,
+      glassware: normalizeOptionalString(formData.getAll("serving_glassware")[index] ?? null),
+      id: createDemoId("serving"),
+      item_id: itemId,
+      item_serving_external_links: [],
+      label,
+      price_cents: parseOptionalMoneyCents(formData.getAll("serving_price")[index] ?? null),
+      size_oz: parseOptionalNumber(formData.getAll("serving_size_oz")[index] ?? null),
+      updated_at: now,
+      venue_id: venueId,
+    }))
+    .filter((serving) => serving.label);
+
+  if (rows.length > 0) {
+    return rows;
+  }
+
+  return [{
+    active: true,
+    created_at: now,
+    currency: "USD",
+    display_order: 0,
+    glassware: null,
+    id: createDemoId("serving"),
+    item_id: itemId,
+    item_serving_external_links: [],
+    label: "Serving",
+    price_cents: null,
+    size_oz: null,
+    updated_at: now,
+    venue_id: venueId,
+  }];
+}
+
+function normalizeCurrency(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "USD").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : "USD";
 }
 
 function normalizeRequiredDate(value: FormDataEntryValue | null) {

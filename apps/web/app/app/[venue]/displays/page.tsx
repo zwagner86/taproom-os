@@ -12,6 +12,7 @@ import {
 } from "@/server/actions/displays";
 import { listVenueDisplayPlaylists } from "@/server/repositories/display-playlists";
 import { listVenueDisplayViews } from "@/server/repositories/display-views";
+import { listVenueMenuSections } from "@/server/repositories/items";
 import { requireVenueAccess } from "@/server/repositories/venues";
 import { getEnv } from "@/env";
 
@@ -33,9 +34,10 @@ export default async function VenueDisplaysPage({
   const [{ venue }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const access = await requireVenueAccess(venue);
   const { venue: venueRecord } = access;
-  const [views, playlists] = await Promise.all([
+  const [views, playlists, menuSections] = await Promise.all([
     listVenueDisplayViews(access.venue.id),
     listVenueDisplayPlaylists(access.venue.id),
+    listVenueMenuSections(access.venue.id),
   ]);
 
   if (access.isDemoVenue) {
@@ -68,6 +70,7 @@ export default async function VenueDisplaysPage({
         deleteViewAction={deleteDisplayViewAction.bind(null, venue)}
         initialSearchParams={resolvedSearchParams}
         playlists={playlists}
+        menuSections={menuSections}
         savePlaylistAction={saveDisplayPlaylistAction.bind(null, venue)}
         saveViewAction={saveDisplayViewAction.bind(null, venue)}
         venueSlug={venue}

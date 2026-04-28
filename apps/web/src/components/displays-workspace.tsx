@@ -35,6 +35,7 @@ import {
 import { slugify } from "@/lib/utils";
 import type { DisplayPlaylistRecord } from "@/server/repositories/display-playlists";
 import type { DisplayViewRecord } from "@/server/repositories/display-views";
+import type { MenuSectionRecord } from "@/server/repositories/items";
 
 import { DisplayLinkField } from "./display-link-field";
 import { DisplayPlaylistPlayer } from "./display-playlist-player";
@@ -71,6 +72,9 @@ const BOOLEAN_FIELDS: Array<{
     | "showStyleMeta"
     | "showPrices"
     | "showAbv"
+    | "showServings"
+    | "showProducer"
+    | "showComingSoon"
     | "showDescriptions"
     | "showCtas"
     | "showFollowCard"
@@ -84,6 +88,9 @@ const BOOLEAN_FIELDS: Array<{
   { description: "Show style, category, and other secondary item metadata.", key: "showStyleMeta", label: "Style metadata" },
   { description: "Show prices when a displayable price exists.", key: "showPrices", label: "Prices" },
   { description: "Show ABV details for drink items.", key: "showAbv", label: "ABV" },
+  { description: "Show pour sizes, glassware, and serving prices.", key: "showServings", label: "Servings" },
+  { description: "Show guest brewery, producer, or origin metadata.", key: "showProducer", label: "Producer" },
+  { description: "Show coming-soon items in their own section.", key: "showComingSoon", label: "Coming soon" },
   { description: "Show item, event, or plan descriptions.", key: "showDescriptions", label: "Descriptions" },
   { description: "Show links back to the full public page.", key: "showCtas", label: "CTAs" },
   { description: "Show the follow/signup card on public views.", key: "showFollowCard", label: "Follow card" },
@@ -101,6 +108,7 @@ export function DisplaysWorkspace({
   deletePlaylistAction,
   deleteViewAction,
   initialSearchParams,
+  menuSections = [],
   playlists,
   savePlaylistAction,
   saveViewAction,
@@ -111,6 +119,7 @@ export function DisplaysWorkspace({
   deletePlaylistAction: (formData: FormData) => void | Promise<void>;
   deleteViewAction: (formData: FormData) => void | Promise<void>;
   initialSearchParams: Record<string, string | string[] | undefined>;
+  menuSections?: MenuSectionRecord[];
   playlists: DisplayPlaylistRecord[];
   savePlaylistAction: (formData: FormData) => void | Promise<void>;
   saveViewAction: (formData: FormData) => void | Promise<void>;
@@ -626,6 +635,7 @@ export function DisplaysWorkspace({
                 />
                 <ViewToggleFields
                   content={viewFormState.content}
+                  menuSections={menuSections}
                   options={viewFormState.options}
                   setOptions={(updater) =>
                     setViewFormState((current) => ({ ...current, options: updater(current.options) }))
@@ -727,6 +737,7 @@ export function DisplaysWorkspace({
                 />
                 <ViewToggleFields
                   content={viewFormState.content}
+                  menuSections={menuSections}
                   options={viewFormState.options}
                   setOptions={(updater) =>
                     setViewFormState((current) => ({ ...current, options: updater(current.options) }))
@@ -1483,66 +1494,125 @@ function ViewSettingsFields({
 
 function ViewToggleFields({
   content,
+  menuSections,
   options,
   setOptions,
   surface,
 }: {
   content: DisplayContent;
+  menuSections: MenuSectionRecord[];
   options: DisplayViewOptions;
   setOptions: (updater: (current: DisplayViewOptions) => DisplayViewOptions) => void;
   surface: DisplayViewDrawerState["surface"];
 }) {
   const normalized = hydrateDisplayViewConfig(options, content, surface);
+  const itemContent = content === "drinks" || content === "food" || content === "menu";
+  const availableSections = itemContent
+    ? menuSections.filter((section) =>
+        content === "drinks" ? section.item_type === "pour" :
+        content === "food" ? section.item_type === "food" :
+        section.item_type === "pour" || section.item_type === "food",
+      )
+    : [];
+  const selectedSectionIds = new Set(options.sectionIds ?? []);
 
   return (
-    <EditorSection title="Display controls">
-      <div
-        className="overflow-hidden rounded-[20px] border"
-        style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.74)" }}
-      >
-        <div className="grid md:grid-cols-2">
-          {BOOLEAN_FIELDS.map((field, index) => {
-            const disabled =
-              (field.key === "showFollowCard" && surface !== "public") ||
-              (field.key === "showMembershipForm" && (surface !== "public" || content !== "memberships"));
-            const needsLeftBorder = index % 2 === 1;
-            const needsTopBorder = index > 1;
+    <>
+      <EditorSection title="Display controls">
+        <div
+          className="overflow-hidden rounded-[20px] border"
+          style={{ borderColor: "var(--c-border)", background: "rgba(255,255,255,0.74)" }}
+        >
+          <div className="grid md:grid-cols-2">
+            {BOOLEAN_FIELDS.map((field, index) => {
+              const disabled =
+                (field.key === "showFollowCard" && surface !== "public") ||
+                (field.key === "showMembershipForm" && (surface !== "public" || content !== "memberships"));
+              const needsLeftBorder = index % 2 === 1;
+              const needsTopBorder = index > 1;
 
-            return (
-              <div
-                className={cn("px-4 py-4", needsLeftBorder && "md:border-l", needsTopBorder && "border-t")}
-                key={field.key}
-                style={{
-                  borderColor: "var(--c-border)",
-                  opacity: disabled ? 0.58 : 1,
-                }}
-              >
-                <Toggle
-                  checked={normalized[field.key]}
-                  className="items-start"
-                  id={field.key}
-                  label={field.label}
-                  onChange={(checked) =>
-                    setOptions((current) => ({
-                      ...current,
-                      [field.key]: checked,
-                    }))
-                  }
-                />
-                <FieldHint className="mt-2 text-[12.5px]">{field.description}</FieldHint>
-                {disabled && (
-                  <FieldHint className="mt-1">
-                    {field.key === "showFollowCard"
-                      ? "Follow cards are public-only."
-                      : "Membership forms only appear on public membership views."}
-                  </FieldHint>
-                )}
-              </div>
-            );
-          })}
+              return (
+                <div
+                  className={cn("px-4 py-4", needsLeftBorder && "md:border-l", needsTopBorder && "border-t")}
+                  key={field.key}
+                  style={{
+                    borderColor: "var(--c-border)",
+                    opacity: disabled ? 0.58 : 1,
+                  }}
+                >
+                  <Toggle
+                    checked={normalized[field.key]}
+                    className="items-start"
+                    id={field.key}
+                    label={field.label}
+                    onChange={(checked) =>
+                      setOptions((current) => ({
+                        ...current,
+                        [field.key]: checked,
+                      }))
+                    }
+                  />
+                  <FieldHint className="mt-2 text-[12.5px]">{field.description}</FieldHint>
+                  {disabled && (
+                    <FieldHint className="mt-1">
+                      {field.key === "showFollowCard"
+                        ? "Follow cards are public-only."
+                        : "Membership forms only appear on public membership views."}
+                    </FieldHint>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </EditorSection>
+      </EditorSection>
+
+      {availableSections.length > 0 && (
+        <EditorSection title="Menu sections">
+          <div className="rounded-[20px] border bg-white/75 p-4" style={{ borderColor: "var(--c-border)" }}>
+            <label className="mb-3 flex items-center gap-2 text-sm font-medium">
+              <input
+                checked={(options.sectionIds ?? []).length === 0}
+                onChange={(event) =>
+                  setOptions((current) => ({
+                    ...current,
+                    sectionIds: event.target.checked ? [] : availableSections.map((section) => section.id),
+                  }))
+                }
+                type="checkbox"
+              />
+              All applicable sections
+            </label>
+            <div className="grid gap-2 md:grid-cols-2">
+              {availableSections.map((section) => (
+                <label className="flex items-center gap-2 text-sm" key={section.id}>
+                  <input
+                    checked={selectedSectionIds.has(section.id)}
+                    disabled={(options.sectionIds ?? []).length === 0}
+                    onChange={(event) =>
+                      setOptions((current) => {
+                        const next = new Set(current.sectionIds ?? []);
+                        if (event.target.checked) {
+                          next.add(section.id);
+                        } else {
+                          next.delete(section.id);
+                        }
+                        return { ...current, sectionIds: [...next] };
+                      })
+                    }
+                    type="checkbox"
+                  />
+                  {section.name}
+                </label>
+              ))}
+            </div>
+            <FieldHint className="mt-3">
+              Turn off all applicable sections to choose a smaller subset for this display.
+            </FieldHint>
+          </div>
+        </EditorSection>
+      )}
+    </>
   );
 }
 

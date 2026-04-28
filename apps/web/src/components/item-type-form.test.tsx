@@ -18,8 +18,10 @@ describe("item type form", () => {
     expect(markup).toContain('value="pour"');
     expect(markup).toContain("ABV (%)");
     expect(markup).toContain("Add pour");
+    expect(markup).toContain("Section");
+    expect(markup).toContain("Servings");
     expect(markup).not.toContain("Event listing");
-    expect(markup).not.toContain("<select");
+    expect(markup).not.toContain("create-type");
   });
 
   it("renders fixed food and merch forms without ABV fields", () => {

@@ -337,6 +337,91 @@ export type Database = {
           venue_id?: string;
         };
       };
+      item_serving_external_links: {
+        Row: {
+          availability_snapshot: boolean | null;
+          created_at: string;
+          external_id: string;
+          id: string;
+          item_serving_id: string;
+          price_snapshot_cents: number | null;
+          price_snapshot_currency: string | null;
+          provider: string;
+          synced_at: string | null;
+          updated_at: string;
+          venue_id: string;
+        };
+        Insert: {
+          availability_snapshot?: boolean | null;
+          created_at?: string;
+          external_id: string;
+          id?: string;
+          item_serving_id: string;
+          price_snapshot_cents?: number | null;
+          price_snapshot_currency?: string | null;
+          provider: string;
+          synced_at?: string | null;
+          updated_at?: string;
+          venue_id: string;
+        };
+        Update: {
+          availability_snapshot?: boolean | null;
+          created_at?: string;
+          external_id?: string;
+          id?: string;
+          item_serving_id?: string;
+          price_snapshot_cents?: number | null;
+          price_snapshot_currency?: string | null;
+          provider?: string;
+          synced_at?: string | null;
+          updated_at?: string;
+          venue_id?: string;
+        };
+      };
+      item_servings: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          currency: string;
+          display_order: number;
+          glassware: string | null;
+          id: string;
+          item_id: string;
+          label: string;
+          price_cents: number | null;
+          size_oz: number | null;
+          updated_at: string;
+          venue_id: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          currency?: string;
+          display_order?: number;
+          glassware?: string | null;
+          id?: string;
+          item_id: string;
+          label: string;
+          price_cents?: number | null;
+          size_oz?: number | null;
+          updated_at?: string;
+          venue_id: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          currency?: string;
+          display_order?: number;
+          glassware?: string | null;
+          id?: string;
+          item_id?: string;
+          label?: string;
+          price_cents?: number | null;
+          size_oz?: number | null;
+          updated_at?: string;
+          venue_id?: string;
+        };
+      };
       items: {
         Row: {
           abv: number | null;
@@ -346,8 +431,12 @@ export type Database = {
           display_order: number;
           id: string;
           image_url: string | null;
+          menu_section_id: string | null;
           name: string;
           price_source: Database["public"]["Enums"]["price_source"];
+          producer_location: string | null;
+          producer_name: string | null;
+          status: Database["public"]["Enums"]["item_status"];
           style_or_category: string | null;
           type: Database["public"]["Enums"]["item_type"];
           updated_at: string;
@@ -361,8 +450,12 @@ export type Database = {
           display_order?: number;
           id?: string;
           image_url?: string | null;
+          menu_section_id?: string | null;
           name: string;
           price_source?: Database["public"]["Enums"]["price_source"];
+          producer_location?: string | null;
+          producer_name?: string | null;
+          status?: Database["public"]["Enums"]["item_status"];
           style_or_category?: string | null;
           type: Database["public"]["Enums"]["item_type"];
           updated_at?: string;
@@ -376,10 +469,49 @@ export type Database = {
           display_order?: number;
           id?: string;
           image_url?: string | null;
+          menu_section_id?: string | null;
           name?: string;
           price_source?: Database["public"]["Enums"]["price_source"];
+          producer_location?: string | null;
+          producer_name?: string | null;
+          status?: Database["public"]["Enums"]["item_status"];
           style_or_category?: string | null;
           type?: Database["public"]["Enums"]["item_type"];
+          updated_at?: string;
+          venue_id?: string;
+        };
+      };
+      menu_sections: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          description: string | null;
+          display_order: number;
+          id: string;
+          item_type: Database["public"]["Enums"]["item_type"];
+          name: string;
+          updated_at: string;
+          venue_id: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          description?: string | null;
+          display_order?: number;
+          id?: string;
+          item_type: Database["public"]["Enums"]["item_type"];
+          name: string;
+          updated_at?: string;
+          venue_id: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          description?: string | null;
+          display_order?: number;
+          id?: string;
+          item_type?: Database["public"]["Enums"]["item_type"];
+          name?: string;
           updated_at?: string;
           venue_id?: string;
         };
@@ -787,6 +919,7 @@ export type Database = {
     Enums: {
       billing_interval: "month" | "quarter" | "year";
       booking_status: "pending" | "confirmed" | "cancelled";
+      item_status: "active" | "coming_soon" | "hidden";
       item_type: "pour" | "food" | "merch";
       notification_channel: "email" | "sms";
       payment_status: "unpaid" | "paid" | "refunded";

@@ -49,22 +49,33 @@ export async function linkSquareItemAction(venueSlug: string, formData: FormData
   }
 
   const supabase = await createServerSupabaseClient();
-  const itemId = String(formData.get("item_id") ?? "");
+  const servingId = String(formData.get("item_serving_id") ?? "");
   const externalId = String(formData.get("external_id") ?? "").trim();
 
   if (!externalId) {
     redirect(`/app/${venueSlug}/integrations/square?error=${encodeURIComponent("Pick a Square item to link.")}`);
   }
 
-  const { error } = await supabase.from("item_external_links").upsert(
+  const { data: serving, error: servingLookupError } = await supabase
+    .from("item_servings")
+    .select("id,item_id")
+    .eq("id", servingId)
+    .eq("venue_id", access.venue.id)
+    .maybeSingle();
+
+  if (servingLookupError || !serving) {
+    redirect(`/app/${venueSlug}/integrations/square?error=${encodeURIComponent(servingLookupError?.message ?? "Pick a serving to link.")}`);
+  }
+
+  const { error } = await supabase.from("item_serving_external_links").upsert(
     {
       external_id: externalId,
-      item_id: itemId,
+      item_serving_id: serving.id,
       provider: "square",
       venue_id: access.venue.id,
     },
     {
-      onConflict: "item_id,provider",
+      onConflict: "item_serving_id,provider",
     },
   );
 
@@ -77,7 +88,7 @@ export async function linkSquareItemAction(venueSlug: string, formData: FormData
     .update({
       price_source: "square",
     })
-    .eq("id", itemId)
+    .eq("id", serving.item_id)
     .eq("venue_id", access.venue.id);
 
   if (itemError) {
@@ -89,7 +100,7 @@ export async function linkSquareItemAction(venueSlug: string, formData: FormData
   revalidatePath(`/v/${venueSlug}/menu`);
   revalidatePath(`/embed/${venueSlug}/menu`);
   revalidatePath(`/tv/${venueSlug}`);
-  redirect(`/app/${venueSlug}/integrations/square?message=${encodeURIComponent("Square item linked.")}`);
+  redirect(`/app/${venueSlug}/integrations/square?message=${encodeURIComponent("Square serving linked.")}`);
 }
 
 export async function syncSquareItemsAction(venueSlug: string) {
@@ -101,21 +112,24 @@ export async function syncSquareItemsAction(venueSlug: string) {
 
   const supabase = await createServerSupabaseClient();
   const items = await listVenueItems(access.venue.id);
-  const linkedItems = items
-    .filter((item) => item.item_external_links[0]?.external_id)
-    .map((item) => ({
-      externalId: item.item_external_links[0]?.external_id ?? undefined,
-      itemId: item.id,
-      itemType: item.type,
-      priceSource: item.price_source,
-    }));
+  const linkedItems = items.flatMap((item) =>
+    item.item_servings
+      .filter((serving) => serving.item_serving_external_links[0]?.external_id)
+      .map((serving) => ({
+        externalId: serving.item_serving_external_links[0]?.external_id ?? undefined,
+        itemId: item.id,
+        itemType: item.type,
+        priceSource: item.price_source,
+        servingId: serving.id,
+      })),
+  );
 
   try {
     const result = await getCatalogProvider().syncItems(access.venue.id, linkedItems);
 
     for (const snapshot of result.snapshots ?? []) {
       await supabase
-        .from("item_external_links")
+        .from("item_serving_external_links")
         .update({
           availability_snapshot: snapshot.availabilitySnapshot,
           price_snapshot_cents: snapshot.priceSnapshotCents,

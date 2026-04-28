@@ -6,6 +6,9 @@ import {
   calculateApplicationFee,
   canResumeMembership,
   followerPrefersChannel,
+  formatServingDetails,
+  formatServingPrice,
+  isPublicItemStatus,
   resolveVenuePaymentCapability,
   resolveDisplayedPrice,
   resolveTerminology,
@@ -28,6 +31,22 @@ describe("domain helpers", () => {
         { priceSnapshotCents: 900, priceSnapshotCurrency: "USD" },
       ),
     ).toBe("$9.00");
+  });
+
+  it("formats serving prices and details", () => {
+    expect(formatServingPrice({ currency: "USD", priceCents: 700 })).toBe("$7.00");
+    expect(
+      formatServingDetails(
+        { currency: "USD", glassware: "tulip", label: "Tulip", priceCents: null, sizeOz: 12 },
+        { priceSnapshotCents: 800, priceSnapshotCurrency: "USD" },
+      ),
+    ).toBe("12 oz · tulip · $8.00");
+  });
+
+  it("treats active and coming soon items as public statuses", () => {
+    expect(isPublicItemStatus("active")).toBe(true);
+    expect(isPublicItemStatus("coming_soon")).toBe(true);
+    expect(isPublicItemStatus("hidden")).toBe(false);
   });
 
   it("does not allow event as a catalog item type", () => {

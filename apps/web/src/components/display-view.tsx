@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { formatAbv, resolveDisplayedPrice } from "@taproom/domain";
+import { formatAbv, formatServingDetails, formatServingPrice, resolveDisplayedPrice } from "@taproom/domain";
 import { Alert, Badge, Button, Card, Input, Label } from "@/components/ui";
 
 import type { Database } from "../../../../supabase/types";
@@ -13,15 +13,14 @@ import { getMembershipGateCopy } from "@/lib/venue-payment-capability";
 import { startMembershipCheckoutAction } from "@/server/actions/memberships";
 import { listPublicVenueEvents } from "@/server/repositories/events";
 import { listPublicVenueItems } from "@/server/repositories/items";
+import type { VenueItemRecord } from "@/server/repositories/items";
 import { listPublicMembershipPlans } from "@/server/repositories/memberships";
 import type { VenueRow } from "@/server/repositories/venues";
 import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 import { PublicFollowCard } from "./public-follow-card";
 
-type ItemRecord = Database["public"]["Tables"]["items"]["Row"] & {
-  item_external_links: Database["public"]["Tables"]["item_external_links"]["Row"][];
-};
+type ItemRecord = VenueItemRecord;
 
 type EventRecord = Database["public"]["Tables"]["events"]["Row"];
 type MembershipPlanRecord = Database["public"]["Tables"]["membership_plans"]["Row"];
@@ -111,7 +110,7 @@ export async function DisplayView({
     notFound();
   }
 
-  const filteredItems = filterItemsByContent(items, resolvedConfig.content);
+  const filteredItems = filterItemsByContent(items, resolvedConfig);
 
   return (
     <DisplayShell
@@ -250,7 +249,7 @@ function DisplayItems({
     return <DisplayEmptyState config={config} emoji="🍺" message="Nothing is published for this display yet." />;
   }
 
-  const grouped = groupItems(items, config.content);
+  const grouped = groupItems(items, config);
 
   if (config.surface === "tv") {
     return (
@@ -285,6 +284,11 @@ function DisplayItems({
                   {buildItemMeta(item, config) && (
                     <div className="text-[14px]" style={{ color: "var(--c-muted)" }}>
                       {buildItemMeta(item, config)}
+                    </div>
+                  )}
+                  {config.showServings && buildServingMeta(item) && (
+                    <div className="mt-2 text-[13px] font-semibold" style={{ color: "var(--accent)" }}>
+                      {buildServingMeta(item)}
                     </div>
                   )}
                   {config.showDescriptions && item.description && (
@@ -329,6 +333,11 @@ function DisplayItems({
                     {buildItemMeta(item, config) && (
                       <div className="mt-1 text-[13px]" style={{ color: "var(--c-muted)" }}>
                         {buildItemMeta(item, config)}
+                      </div>
+                    )}
+                    {config.showServings && buildServingMeta(item) && (
+                      <div className="mt-1 text-[13px] font-medium" style={{ color: "var(--accent)" }}>
+                        {buildServingMeta(item)}
                       </div>
                     )}
                     {config.showDescriptions && item.description && (
@@ -597,37 +606,77 @@ function DisplayEmptyState({
   );
 }
 
-function filterItemsByContent(items: ItemRecord[], content: DisplayContent) {
-  if (content === "drinks") {
-    return items.filter((item) => item.type === "pour");
+function filterItemsByContent(items: ItemRecord[], config: DisplayViewConfig) {
+  const selectedSectionIds = new Set(config.sectionIds ?? []);
+  const bySelectedSections = selectedSectionIds.size > 0
+    ? items.filter((item) => item.menu_section_id && selectedSectionIds.has(item.menu_section_id))
+    : items;
+  const visibleItems = bySelectedSections.filter((item) => item.status === "active" || (config.showComingSoon && item.status === "coming_soon"));
+
+  if (config.content === "drinks") {
+    return visibleItems.filter((item) => item.type === "pour");
   }
 
-  if (content === "food") {
-    return items.filter((item) => item.type === "food");
+  if (config.content === "food") {
+    return visibleItems.filter((item) => item.type === "food");
   }
 
-  return items;
+  if (config.content === "menu") {
+    return visibleItems.filter((item) => item.type === "pour" || item.type === "food");
+  }
+
+  return visibleItems;
 }
 
-function groupItems(items: ItemRecord[], content: DisplayContent) {
-  if (content === "drinks") {
-    return [{ label: "On Tap", items }];
+function groupItems(items: ItemRecord[], config: DisplayViewConfig) {
+  const activeItems = items.filter((item) => item.status === "active");
+  const comingSoonItems = config.showComingSoon ? items.filter((item) => item.status === "coming_soon") : [];
+  const sectionGroups = new Map<string, { label: string; order: number; items: ItemRecord[] }>();
+
+  for (const item of activeItems) {
+    const section = item.menu_sections;
+    const key = section?.id ?? item.type;
+    const existing = sectionGroups.get(key);
+    const label = section?.name ?? GROUP_LABELS[item.type] ?? item.type;
+    const order = section?.display_order ?? fallbackTypeOrder(item.type);
+
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      sectionGroups.set(key, { items: [item], label, order });
+    }
   }
 
-  if (content === "food") {
-    return [{ label: "Kitchen", items }];
+  const groups = [...sectionGroups.values()]
+    .sort((left, right) => left.order - right.order || left.label.localeCompare(right.label))
+    .map((group) => ({
+      items: sortItemsForDisplay(group.items),
+      label: group.label,
+    }));
+
+  if (comingSoonItems.length > 0) {
+    groups.push({
+      items: sortItemsForDisplay(comingSoonItems),
+      label: "Coming Soon",
+    });
   }
 
-  const order = ["pour", "food", "merch"];
-  return order
-    .map((type) => ({
-      items: items.filter((item) => item.type === type),
-      label: GROUP_LABELS[type] ?? type,
-    }))
-    .filter((group) => group.items.length > 0);
+  return groups;
 }
 
 function resolveItemPrice(item: ItemRecord) {
+  const firstServing = item.item_servings.find((serving) => serving.active);
+
+  if (firstServing) {
+    const linkedServingPrice = firstServing.item_serving_external_links[0];
+    return formatServingPrice({ currency: firstServing.currency, priceCents: firstServing.price_cents }, linkedServingPrice
+      ? {
+          priceSnapshotCents: linkedServingPrice.price_snapshot_cents,
+          priceSnapshotCurrency: linkedServingPrice.price_snapshot_currency,
+        }
+      : null);
+  }
+
   const linkedPrice = item.item_external_links[0];
   return resolveDisplayedPrice(
     { priceSource: item.price_source },
@@ -644,7 +693,42 @@ function buildItemMeta(item: ItemRecord, config: DisplayViewConfig) {
   return [
     config.showStyleMeta ? item.style_or_category : null,
     config.showAbv ? formatAbv(item.abv) : null,
+    config.showProducer ? formatProducer(item) : null,
   ].filter(Boolean).join(" · ");
+}
+
+function buildServingMeta(item: ItemRecord) {
+  return item.item_servings
+    .filter((serving) => serving.active)
+    .map((serving) => {
+      const linkedPrice = serving.item_serving_external_links[0];
+      return formatServingDetails({
+        currency: serving.currency,
+        glassware: serving.glassware,
+        label: serving.label,
+        priceCents: serving.price_cents,
+        sizeOz: serving.size_oz,
+      }, linkedPrice
+        ? {
+            priceSnapshotCents: linkedPrice.price_snapshot_cents,
+            priceSnapshotCurrency: linkedPrice.price_snapshot_currency,
+          }
+        : null);
+    })
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function formatProducer(item: ItemRecord) {
+  return [item.producer_name, item.producer_location].filter(Boolean).join(" · ") || null;
+}
+
+function fallbackTypeOrder(type: string) {
+  return type === "pour" ? 10 : type === "food" ? 20 : 30;
+}
+
+function sortItemsForDisplay(items: ItemRecord[]) {
+  return [...items].sort((left, right) => left.display_order - right.display_order || left.name.localeCompare(right.name));
 }
 
 function getDisplayTitle(venue: VenueRow, content: DisplayContent) {

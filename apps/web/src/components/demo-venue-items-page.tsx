@@ -23,8 +23,23 @@ export function DemoVenueItemsPage({
 }) {
   const { createItem, deleteItem, dispatchSeedItems, state, toggleItemActive } = useDemoVenue();
   const items = state.items ?? initialItems;
-  const activeCount = useMemo(() => items.filter((item) => item.active).length, [items]);
+  const activeCount = useMemo(() => items.filter((item) => item.status === "active" || item.active).length, [items]);
   const groupedItems = useMemo(() => groupCatalogItems(items), [items]);
+  const demoSections = useMemo(
+    () =>
+      ITEM_SECTION_CONFIGS.map((section, index) => ({
+        active: true,
+        description: section.description,
+        display_order: index * 10,
+        id: `demo-section-${section.type}`,
+        item_type: section.type,
+        name: section.label,
+        updated_at: "",
+        created_at: "",
+        venue_id: "",
+      })),
+    [],
+  );
   const [error, setError] = useState<string | null>(initialError ?? null);
   const [formKey, setFormKey] = useState(0);
   const [result, setResult] = useState<ReturnType<typeof createItem> | null>(null);
@@ -57,7 +72,7 @@ export function DemoVenueItemsPage({
 
   return (
     <div>
-      <PageHeader title="Item Management" subtitle={`${activeCount} active items across drinks, food, and merch`} />
+      <PageHeader title="Menu Builder" subtitle={`${activeCount} published demo items across drinks, food, and merch`} />
 
       <div className="mb-5 space-y-4">
         <DemoMutationAlert onDismiss={() => setResult(null)} result={result} />
@@ -69,7 +84,7 @@ export function DemoVenueItemsPage({
       </div>
 
       <div className="mt-6 space-y-8">
-        {ITEM_SECTION_CONFIGS.map((section) => (
+        {ITEM_SECTION_CONFIGS.map((section, index) => (
           <ItemManagementSection
             actionRenderer={
               <AdminCreateDrawer
@@ -82,13 +97,14 @@ export function DemoVenueItemsPage({
                     action={(formData) => createAction(formData, close)}
                     fixedType={section.type}
                     key={`${section.type}-${formKey}`}
+                    sections={demoSections}
                     submitLabel={`Add ${section.singularLabel}`}
                   />
                 )}
               </AdminCreateDrawer>
             }
             items={groupedItems[section.type]}
-            key={section.type}
+            key={demoSections[index]?.id ?? section.type}
             renderActions={(item) => (
               <div className="flex items-center gap-2">
                 <ItemActiveToggle
@@ -101,7 +117,7 @@ export function DemoVenueItemsPage({
                       setError(nextError instanceof Error ? nextError.message : "Unable to update item.");
                     }
                   }}
-                  active={item.active}
+                  active={item.status !== "hidden"}
                 />
                 <Button
                   onClick={() => void handleDelete(item.id)}
@@ -114,7 +130,13 @@ export function DemoVenueItemsPage({
                 </Button>
               </div>
             )}
-            type={section.type}
+            section={demoSections[index] ?? {
+              active: true,
+              description: section.description,
+              id: section.type,
+              item_type: section.type,
+              name: section.label,
+            }}
           />
         ))}
       </div>

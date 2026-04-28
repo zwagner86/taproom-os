@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
+import type { ComponentProps } from "react";
 
 import { Alert } from "@/components/ui";
 
@@ -16,11 +17,13 @@ export function AddItemForm({
   disabled = false,
   itemType,
   onSuccess,
+  sections = [],
 }: {
   action: (prevState: ItemFormState, formData: FormData) => Promise<ItemFormState>;
   disabled?: boolean;
   itemType?: CatalogItemType;
   onSuccess?: () => void;
+  sections?: ComponentProps<typeof ItemTypeForm>["sections"];
 }) {
   const [state, formAction] = useActionState(action, null);
   const [formKey, setFormKey] = useState(0);
@@ -43,6 +46,7 @@ export function AddItemForm({
         action={formAction}
         disabled={disabled}
         fixedType={itemType}
+        sections={sections}
         submitLabel={itemType ? `Add ${ITEM_TYPE_LABELS[itemType]}` : undefined}
       />
     </>
@@ -53,11 +57,13 @@ export function AddItemDrawer({
   action,
   disabled = false,
   itemType,
+  sections = [],
   triggerLabel,
 }: {
   action: (prevState: ItemFormState, formData: FormData) => Promise<ItemFormState>;
   disabled?: boolean;
   itemType?: CatalogItemType;
+  sections?: ComponentProps<typeof ItemTypeForm>["sections"];
   triggerLabel?: string;
 }) {
   const router = useRouter();
@@ -82,6 +88,7 @@ export function AddItemDrawer({
             router.refresh();
           }}
           itemType={itemType}
+          sections={sections}
         />
       )}
     </AdminCreateDrawer>

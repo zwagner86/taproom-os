@@ -57,7 +57,7 @@ export default async function VenueSquarePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        subtitle="Link TaproomOS items to Square catalog variations for live price snapshots."
+        subtitle="Link TaproomOS serving options to Square catalog variations for live price snapshots."
         title="Square Integration"
       />
 
@@ -105,7 +105,7 @@ export default async function VenueSquarePage({
           <Card>
             <div className="text-sm font-semibold mb-2" style={{ color: "var(--c-text)" }}>How it works</div>
             <p className="text-[13px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-              TaproomOS keeps items as source records and links live Square catalog variations for price and availability snapshots.
+              TaproomOS keeps menu items as source records and links serving options to live Square catalog variations for price and availability snapshots.
               No mirrored catalog table, no inventory writeback.
             </p>
           </Card>
@@ -174,31 +174,35 @@ export default async function VenueSquarePage({
                           <div className="flex-1">
                             <div className="flex flex-col gap-1">
                               <FieldLabel
-                                htmlFor={`link-item-${result.id}`}
-                                info="Linking connects this Square variation to one TaproomOS menu item so live pricing and availability snapshots can stay in sync."
+                                htmlFor={`link-serving-${result.id}`}
+                                info="Linking connects this Square variation to one TaproomOS serving so live pricing and availability snapshots can stay in sync."
                               >
-                                Link to TaproomOS item
+                                Link to serving
                               </FieldLabel>
                               <div className="flex gap-2">
                                 <Select
-                                  aria-describedby={`link-item-${result.id}-hint`}
+                                  aria-describedby={`link-serving-${result.id}-hint`}
                                   defaultValue=""
-                                  id={`link-item-${result.id}`}
-                                  name="item_id"
+                                  id={`link-serving-${result.id}`}
+                                  name="item_serving_id"
                                   required
                                   style={{ flex: 1 }}
                                 >
-                                  <option disabled value="">Link to item…</option>
+                                  <option disabled value="">Link to serving...</option>
                                   {items.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                      {item.name}
-                                    </option>
+                                    <optgroup key={item.id} label={item.name}>
+                                      {item.item_servings.map((serving) => (
+                                        <option key={serving.id} value={serving.id}>
+                                          {serving.label}
+                                        </option>
+                                      ))}
+                                    </optgroup>
                                   ))}
                                 </Select>
                                 <Button size="sm" type="submit">Link</Button>
                               </div>
-                              <FieldHint id={`link-item-${result.id}-hint`}>
-                                Choose the internal menu item that should receive price and availability snapshots from this Square variation.
+                              <FieldHint id={`link-serving-${result.id}-hint`}>
+                                Choose the menu serving that should receive price and availability snapshots from this Square variation.
                               </FieldHint>
                             </div>
                           </div>

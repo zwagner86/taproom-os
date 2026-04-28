@@ -39,20 +39,23 @@ export async function POST(request: Request) {
   }
 
   const items = await listVenueItems(venueId);
-  const linkedItems = items
-    .filter((item) => item.item_external_links[0]?.external_id)
-    .map((item) => ({
-      externalId: item.item_external_links[0]?.external_id ?? undefined,
-      itemId: item.id,
-      itemType: item.type,
-      priceSource: item.price_source,
-    }));
+  const linkedItems = items.flatMap((item) =>
+    item.item_servings
+      .filter((serving) => serving.item_serving_external_links[0]?.external_id)
+      .map((serving) => ({
+        externalId: serving.item_serving_external_links[0]?.external_id ?? undefined,
+        itemId: item.id,
+        itemType: item.type,
+        priceSource: item.price_source,
+        servingId: serving.id,
+      })),
+  );
 
   const result = await getCatalogProvider().syncItems(venueId, linkedItems);
 
   for (const snapshot of result.snapshots ?? []) {
     await supabase
-      .from("item_external_links")
+      .from("item_serving_external_links")
       .update({
         availability_snapshot: snapshot.availabilitySnapshot,
         price_snapshot_cents: snapshot.priceSnapshotCents,

@@ -26,6 +26,7 @@ export type VenueItemSyncRecord = {
   itemType: ItemType;
   priceSource: PriceSource;
   externalId?: string;
+  servingId?: string;
 };
 
 export type CheckoutSessionRequest = {

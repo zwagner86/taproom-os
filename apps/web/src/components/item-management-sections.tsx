@@ -4,31 +4,49 @@ import { Beer, Package, Utensils } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge, Button, Card, DataTable, EmptyState } from "@/components/ui";
-import { ITEM_SECTION_CONFIG_BY_TYPE, type CatalogItemType } from "@/lib/item-management";
+import { DEFAULT_MENU_SECTION_NAMES, ITEM_STATUS_LABELS, type CatalogItemStatus, type CatalogItemType } from "@/lib/item-management";
 
 export type ItemManagementRecord = {
   abv: number | null;
+  description: string | null;
+  id: string;
+  item_servings?: Array<{
+    active: boolean;
+    glassware: string | null;
+    label: string;
+    price_cents: number | null;
+    size_oz: number | null;
+  }>;
+  menu_section_id: string | null;
+  name: string;
+  producer_location: string | null;
+  producer_name: string | null;
+  status: CatalogItemStatus;
+  style_or_category: string | null;
+  type: CatalogItemType;
+};
+
+export type ItemManagementMenuSection = {
   active: boolean;
   description: string | null;
   id: string;
+  item_type: CatalogItemType;
   name: string;
-  style_or_category: string | null;
-  type: CatalogItemType;
 };
 
 export function ItemManagementSection({
   actionRenderer,
   items,
   renderActions,
-  type,
+  section,
 }: {
   actionRenderer: ReactNode;
   items: ItemManagementRecord[];
   renderActions: (item: ItemManagementRecord) => ReactNode;
-  type: CatalogItemType;
+  section: ItemManagementMenuSection;
 }) {
-  const config = ITEM_SECTION_CONFIG_BY_TYPE[type];
-  const activeCount = items.filter((item) => item.active).length;
+  const activeCount = items.filter((item) => item.status === "active").length;
+  const visibleCount = items.filter((item) => item.status !== "hidden").length;
 
   return (
     <section className="space-y-3">
@@ -36,12 +54,13 @@ export function ItemManagementSection({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold tracking-[-0.01em]" style={{ color: "var(--c-text)" }}>
-              {config.label}
+              {section.name}
             </h2>
-            <Badge variant={activeCount > 0 ? "success" : "default"}>{activeCount} active</Badge>
+            <Badge variant={visibleCount > 0 ? "success" : "default"}>{visibleCount} visible</Badge>
+            {!section.active && <Badge variant="default">Section hidden</Badge>}
           </div>
           <p className="mt-1 max-w-2xl text-sm leading-6" style={{ color: "var(--c-muted)" }}>
-            {config.description}
+            {section.description ?? `${DEFAULT_MENU_SECTION_NAMES[section.item_type]} assigned to this menu section.`}
           </p>
         </div>
         {actionRenderer}
@@ -51,9 +70,9 @@ export function ItemManagementSection({
         <Card>
           <EmptyState
             className="py-8"
-            description={config.emptyDescription}
-            icon={ITEM_SECTION_ICONS[type]}
-            title={`No ${config.label.toLowerCase()} yet`}
+            description="Add the first item for this menu section."
+            icon={ITEM_SECTION_ICONS[section.item_type]}
+            title={`No ${section.name.toLowerCase()} yet`}
           />
         </Card>
       ) : (
@@ -65,9 +84,9 @@ export function ItemManagementSection({
               label: "Item",
               render: (item) => (
                 <div className="flex items-center gap-2.5">
-                  <span style={{ fontSize: 16 }}>{ITEM_TYPE_EMOJI[item.type]}</span>
-                  <div>
-                    <div className="font-semibold" style={{ color: item.active ? "var(--c-text)" : "var(--c-muted)" }}>
+                    <span style={{ fontSize: 16 }}>{ITEM_TYPE_EMOJI[item.type]}</span>
+                    <div>
+                    <div className="font-semibold" style={{ color: item.status !== "hidden" ? "var(--c-text)" : "var(--c-muted)" }}>
                       {item.name}
                     </div>
                     {item.description && (
@@ -81,10 +100,27 @@ export function ItemManagementSection({
             },
             {
               key: "abv",
-              label: type === "pour" ? "ABV / Style" : "Category",
+              label: section.item_type === "pour" ? "Details" : "Category",
               render: (item) => (
                 <span style={{ color: "var(--c-muted)", fontSize: 13 }}>
-                  {[item.style_or_category, item.abv ? `${item.abv}% ABV` : null].filter(Boolean).join(" · ") || "-"}
+                  {[
+                    item.style_or_category,
+                    item.abv ? `${item.abv}% ABV` : null,
+                    item.producer_name,
+                    item.producer_location,
+                  ].filter(Boolean).join(" · ") || "-"}
+                </span>
+              ),
+            },
+            {
+              key: "servings",
+              label: "Servings",
+              render: (item) => (
+                <span style={{ color: "var(--c-muted)", fontSize: 13 }}>
+                  {(item.item_servings ?? [])
+                    .filter((serving) => serving.active)
+                    .map((serving) => [serving.size_oz ? `${serving.size_oz} oz` : serving.label, serving.glassware].filter(Boolean).join(" "))
+                    .join(" · ") || "-"}
                 </span>
               ),
             },
@@ -92,7 +128,9 @@ export function ItemManagementSection({
               key: "status",
               label: "Status",
               render: (item) => (
-                <Badge variant={item.active ? "success" : "default"}>{item.active ? "Active" : "Hidden"}</Badge>
+                <Badge variant={item.status === "active" ? "success" : item.status === "coming_soon" ? "info" : "default"}>
+                  {ITEM_STATUS_LABELS[item.status]}
+                </Badge>
               ),
             },
             {

@@ -23,10 +23,14 @@ export const displayViewOptionsSchema = z.object({
   showStyleMeta: z.boolean().default(true),
   showPrices: z.boolean().default(true),
   showAbv: z.boolean().default(true),
+  showServings: z.boolean().default(true),
+  showProducer: z.boolean().default(true),
+  showComingSoon: z.boolean().default(true),
   showDescriptions: z.boolean().default(true),
   showCtas: z.boolean().default(true),
   showFollowCard: z.boolean().default(true),
   showMembershipForm: z.boolean().default(false),
+  sectionIds: z.array(z.string().uuid()).default([]),
   linkTarget: displayLinkTargetSchema.default("same-tab"),
 });
 
@@ -65,6 +69,9 @@ const BOOLEAN_QUERY_KEYS = {
   showFollowCard: "follow",
   showLogo: "logo",
   showMembershipForm: "membershipForm",
+  showComingSoon: "comingSoon",
+  showProducer: "producer",
+  showServings: "servings",
   showPrices: "prices",
   showStyleMeta: "styleMeta",
   showTagline: "tagline",
@@ -77,6 +84,9 @@ const BOOLEAN_QUERY_KEYS = {
   | "showFollowCard"
   | "showLogo"
   | "showMembershipForm"
+  | "showComingSoon"
+  | "showProducer"
+  | "showServings"
   | "showPrices"
   | "showStyleMeta"
   | "showTagline"
@@ -123,15 +133,19 @@ export function getDefaultDisplayViewOptions(surface: DisplaySurface, content: D
     linkTarget: surface === "embed" ? "new-tab" : "same-tab",
     theme: "venue-default",
     showAbv: true,
+    showComingSoon: true,
     showCtas: content === "events" || content === "memberships",
     showDescriptions: true,
     showFollowCard: surface === "public",
     showLogo: surface !== "tv",
     showMembershipForm: surface === "public" && content === "memberships",
     showPrices: surface !== "tv",
+    showProducer: true,
+    showServings: true,
     showStyleMeta: true,
     showTagline: surface !== "embed",
     showVenueName: true,
+    sectionIds: [],
     surface,
   };
 
@@ -174,15 +188,19 @@ export function extractDisplayViewOptions(config: DisplayViewConfig): DisplayVie
     linkTarget: config.linkTarget,
     theme: config.theme,
     showAbv: config.showAbv,
+    showComingSoon: config.showComingSoon,
     showCtas: config.showCtas,
     showDescriptions: config.showDescriptions,
     showFollowCard: config.showFollowCard,
     showLogo: config.showLogo,
     showMembershipForm: config.showMembershipForm,
     showPrices: config.showPrices,
+    showProducer: config.showProducer,
+    showServings: config.showServings,
     showStyleMeta: config.showStyleMeta,
     showTagline: config.showTagline,
     showVenueName: config.showVenueName,
+    sectionIds: config.sectionIds,
   });
 }
 
@@ -254,15 +272,19 @@ export function parseDisplayViewConfigFromSearchParams(
     linkTarget: parseEnumValue(displayLinkTargetSchema, getParam(searchParams, "linkTarget")),
     theme: parseEnumValue(displayThemeSchema, getParam(searchParams, "theme")),
     showAbv: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showAbv)),
+    showComingSoon: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showComingSoon)),
     showCtas: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showCtas)),
     showDescriptions: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showDescriptions)),
     showFollowCard: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showFollowCard)),
     showLogo: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showLogo)),
     showMembershipForm: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showMembershipForm)),
     showPrices: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showPrices)),
+    showProducer: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showProducer)),
+    showServings: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showServings)),
     showStyleMeta: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showStyleMeta)),
     showTagline: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showTagline)),
     showVenueName: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showVenueName)),
+    sectionIds: parseSectionIds(getParam(searchParams, "sections")),
     surface: parseEnumValue(displaySurfaceSchema, getParam(searchParams, "surface")),
   };
 
@@ -300,10 +322,16 @@ export function serializeDisplayViewConfigToSearchParams(
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showStyleMeta, config.showStyleMeta, defaults?.showStyleMeta);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showPrices, config.showPrices, defaults?.showPrices);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showAbv, config.showAbv, defaults?.showAbv);
+  appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showServings, config.showServings, defaults?.showServings);
+  appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showProducer, config.showProducer, defaults?.showProducer);
+  appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showComingSoon, config.showComingSoon, defaults?.showComingSoon);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showDescriptions, config.showDescriptions, defaults?.showDescriptions);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showCtas, config.showCtas, defaults?.showCtas);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showFollowCard, config.showFollowCard, defaults?.showFollowCard);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showMembershipForm, config.showMembershipForm, defaults?.showMembershipForm);
+  if ((config.sectionIds ?? []).length > 0 && config.sectionIds.join(",") !== defaults?.sectionIds?.join(",")) {
+    params.set("sections", config.sectionIds.join(","));
+  }
 
   return params;
 }
@@ -373,6 +401,15 @@ function parseBooleanValue(value: string | undefined) {
   }
 
   return undefined;
+}
+
+function parseSectionIds(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = z.array(z.string().uuid()).safeParse(value.split(",").map((entry) => entry.trim()).filter(Boolean));
+  return parsed.success ? parsed.data : undefined;
 }
 
 function parseEnumValue<T extends string>(
