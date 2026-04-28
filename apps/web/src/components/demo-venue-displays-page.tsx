@@ -7,11 +7,13 @@ import { useDemoVenue } from "@/components/demo-venue-provider";
 import { DisplaysWorkspace } from "@/components/displays-workspace";
 import { Alert, PageHeader } from "@/components/ui";
 import type { DemoDisplayPlaylistRecord, DemoDisplayViewRecord } from "@/lib/demo-venue-state";
+import type { DisplayContent } from "@/lib/displays";
 import type { VenueRow } from "@/server/repositories/venues";
 
 export function DemoVenueDisplaysPage({
   appUrl,
   initialError,
+  initialDisplayContentCounts,
   initialPlaylists,
   initialSearchParams,
   initialVenue,
@@ -20,6 +22,7 @@ export function DemoVenueDisplaysPage({
 }: {
   appUrl: string;
   initialError?: string;
+  initialDisplayContentCounts?: Partial<Record<DisplayContent, number>>;
   initialPlaylists: DemoDisplayPlaylistRecord[];
   initialSearchParams: Record<string, string | string[] | undefined>;
   initialVenue: VenueRow;
@@ -80,6 +83,7 @@ export function DemoVenueDisplaysPage({
             setError(nextError instanceof Error ? nextError.message : "Unable to delete display view.");
           }
         }}
+        displayContentCounts={initialDisplayContentCounts}
         initialSearchParams={initialSearchParams}
         playlists={playlists}
         savePlaylistAction={async (formData) => {

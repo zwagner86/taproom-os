@@ -1,16 +1,21 @@
 begin;
 
-delete from public.provider_webhook_events
-where venue_id = '11111111-1111-1111-1111-111111111111'
-   or venue_id in (
-     select id
-     from public.venues
-     where slug = 'demo-taproom'
-   );
+do $$
+declare
+  demo_venue_ids uuid[];
+begin
+  select coalesce(array_agg(id), '{}')
+  into demo_venue_ids
+  from public.venues
+  where id = '11111111-1111-1111-1111-111111111111'
+     or slug = 'demo-taproom';
 
-delete from public.venues
-where id = '11111111-1111-1111-1111-111111111111'
-   or slug = 'demo-taproom';
+  delete from public.provider_webhook_events
+  where venue_id = any(demo_venue_ids);
+
+  delete from public.venues
+  where id = any(demo_venue_ids);
+end $$;
 
 insert into public.venues (id, name, slug, venue_type, menu_label, membership_label, accent_color, tagline)
 values (
@@ -24,6 +29,76 @@ values (
   'Rotating pours, events, and memberships from one control room.'
 );
 
+delete from public.menu_sections
+where venue_id = '11111111-1111-1111-1111-111111111111';
+
+insert into public.menu_sections (id, venue_id, item_type, name, description, display_order)
+values
+  (
+    '12121212-1212-1212-1212-121212120101',
+    '11111111-1111-1111-1111-111111111111',
+    'pour',
+    'Regular Beers',
+    'Core house beers that are almost always on the board.',
+    10
+  ),
+  (
+    '12121212-1212-1212-1212-121212120102',
+    '11111111-1111-1111-1111-111111111111',
+    'pour',
+    'Seasonal Beers',
+    'Limited releases and rotating small-batch taps.',
+    20
+  ),
+  (
+    '12121212-1212-1212-1212-121212120103',
+    '11111111-1111-1111-1111-111111111111',
+    'pour',
+    'Guest Pours',
+    'Partner beverages that round out the tap list.',
+    30
+  ),
+  (
+    '12121212-1212-1212-1212-121212120104',
+    '11111111-1111-1111-1111-111111111111',
+    'pour',
+    'Non-Alcoholic',
+    'Zero-proof pours and packaged options.',
+    40
+  ),
+  (
+    '12121212-1212-1212-1212-121212120201',
+    '11111111-1111-1111-1111-111111111111',
+    'food',
+    'Shareables',
+    'Table-friendly snacks built for groups.',
+    50
+  ),
+  (
+    '12121212-1212-1212-1212-121212120202',
+    '11111111-1111-1111-1111-111111111111',
+    'food',
+    'Snacks',
+    'Quick bites for a round or two.',
+    60
+  ),
+  (
+    '12121212-1212-1212-1212-121212120203',
+    '11111111-1111-1111-1111-111111111111',
+    'food',
+    'Mains',
+    'Heartier dishes for dinner service.',
+    70
+  ),
+  (
+    '12121212-1212-1212-1212-121212120204',
+    '11111111-1111-1111-1111-111111111111',
+    'food',
+    'Salads & Sweets',
+    'Lighter plates and dessert.',
+    80
+  );
+
 insert into public.items (
   id,
   venue_id,
@@ -34,7 +109,11 @@ insert into public.items (
   description,
   active,
   display_order,
-  price_source
+  price_source,
+  menu_section_id,
+  producer_name,
+  producer_location,
+  status
 )
 values
   (
@@ -47,7 +126,11 @@ values
     'Bright citrus, resinous finish, built for the after-work crowd.',
     true,
     10,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222202',
@@ -59,7 +142,11 @@ values
     'Snappy floral bitterness with a crisp finish that keeps the first round moving.',
     true,
     20,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222203',
@@ -71,7 +158,11 @@ values
     'Toasty malt, orange peel, and just enough bite to bridge lagers and hops.',
     true,
     30,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222204',
@@ -83,7 +174,11 @@ values
     'Soft grapefruit aroma with a lean body that drinks easy all service long.',
     true,
     40,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222205',
@@ -95,7 +190,11 @@ values
     'Juicy mango and peach notes with a pillowy finish and low perceived bitterness.',
     true,
     50,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120102',
+    'Demo Taproom',
+    'Chicago, IL',
+    'coming_soon'
   ),
   (
     '22222222-2222-2222-2222-222222222206',
@@ -107,7 +206,11 @@ values
     'Clean, bright, and quietly malty for guests who want an easy pint.',
     true,
     60,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222207',
@@ -119,7 +222,11 @@ values
     'Banana and clove aromatics with a soft wheat body and lively carbonation.',
     true,
     70,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222208',
@@ -131,7 +238,11 @@ values
     'Light honey sweetness, gentle cracker malt, and a crowd-friendly finish.',
     true,
     80,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222209',
@@ -143,7 +254,11 @@ values
     'Roasted cocoa and espresso notes with a silky texture and dry close.',
     true,
     90,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222210',
@@ -153,9 +268,13 @@ values
     'Dry Stout',
     5.2,
     'Classic roast character, dark chocolate bitterness, and a sessionable body.',
-    true,
+    false,
     100,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120101',
+    'Demo Taproom',
+    'Chicago, IL',
+    'hidden'
   ),
   (
     '22222222-2222-2222-2222-222222222211',
@@ -167,7 +286,11 @@ values
     'A crisp guest tap with bright apple aroma and a bone-dry finish.',
     true,
     110,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120103',
+    'Orchard & Rail Cidery',
+    'Fennville, MI',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222212',
@@ -179,7 +302,11 @@ values
     'Sparkling hop water with lime zest and pine for a no-ABV option.',
     true,
     120,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120104',
+    'Trailhead Botanics',
+    'Madison, WI',
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222213',
@@ -191,7 +318,11 @@ values
     'A soft pretzel trio with beer cheese, grain mustard, and hot honey.',
     true,
     210,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120201',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222214',
@@ -203,7 +334,11 @@ values
     'Kettle chips stacked with lager cheese, pickled jalapenos, and scallions.',
     true,
     220,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120201',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222215',
@@ -215,7 +350,11 @@ values
     'Wisconsin-style curds fried crisp and served with dill ranch.',
     true,
     230,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120202',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222216',
@@ -227,7 +366,11 @@ values
     'Thick-cut pickle chips with cornmeal crunch and comeback sauce.',
     true,
     240,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120202',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222217',
@@ -239,7 +382,11 @@ values
     'Crispy fries topped with bacon, queso, pickled onions, and herbs.',
     true,
     250,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120201',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222218',
@@ -251,7 +398,11 @@ values
     'Double-patty burger with house sauce, onions, pickles, and American cheese.',
     true,
     260,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120203',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222219',
@@ -263,7 +414,11 @@ values
     'Beer-braised brat with kraut, mustard, and a warm potato salad.',
     true,
     270,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120203',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222220',
@@ -275,7 +430,11 @@ values
     'Crispy thigh, spicy glaze, pickles, and cooling slaw on a brioche bun.',
     true,
     280,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120203',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222221',
@@ -287,7 +446,11 @@ values
     'Three tacos with charred chicken, onion, cilantro, and salsa verde.',
     true,
     290,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120203',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222222',
@@ -299,7 +462,11 @@ values
     'Flatbread with roasted peppers, mushrooms, mozzarella, and basil oil.',
     true,
     300,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120203',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222223',
@@ -311,7 +478,11 @@ values
     'Romaine, parmesan, crunchy crumbs, and a punchy garlic dressing.',
     true,
     310,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120204',
+    null,
+    null,
+    'active'
   ),
   (
     '22222222-2222-2222-2222-222222222224',
@@ -323,8 +494,54 @@ values
     'Dark chocolate cake with stout ganache and whipped cream.',
     true,
     320,
-    'unpriced'
+    'manual',
+    '12121212-1212-1212-1212-121212120204',
+    null,
+    null,
+    'active'
   );
+
+delete from public.item_servings
+where venue_id = '11111111-1111-1111-1111-111111111111';
+
+insert into public.item_servings (id, item_id, venue_id, label, size_oz, glassware, price_cents, display_order)
+values
+  ('23232323-2323-2323-2323-232323230101', '22222222-2222-2222-2222-222222222201', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 350, 10),
+  ('23232323-2323-2323-2323-232323230102', '22222222-2222-2222-2222-222222222201', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 800, 20),
+  ('23232323-2323-2323-2323-232323230201', '22222222-2222-2222-2222-222222222202', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 300, 10),
+  ('23232323-2323-2323-2323-232323230202', '22222222-2222-2222-2222-222222222202', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 700, 20),
+  ('23232323-2323-2323-2323-232323230301', '22222222-2222-2222-2222-222222222203', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 300, 10),
+  ('23232323-2323-2323-2323-232323230302', '22222222-2222-2222-2222-222222222203', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 750, 20),
+  ('23232323-2323-2323-2323-232323230401', '22222222-2222-2222-2222-222222222204', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 325, 10),
+  ('23232323-2323-2323-2323-232323230402', '22222222-2222-2222-2222-222222222204', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 750, 20),
+  ('23232323-2323-2323-2323-232323230501', '22222222-2222-2222-2222-222222222205', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 375, 10),
+  ('23232323-2323-2323-2323-232323230502', '22222222-2222-2222-2222-222222222205', '11111111-1111-1111-1111-111111111111', 'Tulip', 13.0, 'Tulip', 850, 20),
+  ('23232323-2323-2323-2323-232323230601', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 300, 10),
+  ('23232323-2323-2323-2323-232323230602', '22222222-2222-2222-2222-222222222206', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 650, 20),
+  ('23232323-2323-2323-2323-232323230701', '22222222-2222-2222-2222-222222222207', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 325, 10),
+  ('23232323-2323-2323-2323-232323230702', '22222222-2222-2222-2222-222222222207', '11111111-1111-1111-1111-111111111111', 'Weizen', 16.0, 'Weizen glass', 750, 20),
+  ('23232323-2323-2323-2323-232323230801', '22222222-2222-2222-2222-222222222208', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 300, 10),
+  ('23232323-2323-2323-2323-232323230802', '22222222-2222-2222-2222-222222222208', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 650, 20),
+  ('23232323-2323-2323-2323-232323230901', '22222222-2222-2222-2222-222222222209', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 350, 10),
+  ('23232323-2323-2323-2323-232323230902', '22222222-2222-2222-2222-222222222209', '11111111-1111-1111-1111-111111111111', 'Tulip', 13.0, 'Tulip', 800, 20),
+  ('23232323-2323-2323-2323-232323231001', '22222222-2222-2222-2222-222222222210', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 325, 10),
+  ('23232323-2323-2323-2323-232323231002', '22222222-2222-2222-2222-222222222210', '11111111-1111-1111-1111-111111111111', 'Pint', 16.0, 'Pub glass', 700, 20),
+  ('23232323-2323-2323-2323-232323231101', '22222222-2222-2222-2222-222222222211', '11111111-1111-1111-1111-111111111111', 'Taster', 5.0, 'Sampler glass', 350, 10),
+  ('23232323-2323-2323-2323-232323231102', '22222222-2222-2222-2222-222222222211', '11111111-1111-1111-1111-111111111111', 'Draft', 12.0, 'Stemmed glass', 800, 20),
+  ('23232323-2323-2323-2323-232323231201', '22222222-2222-2222-2222-222222222212', '11111111-1111-1111-1111-111111111111', 'Can', 12.0, 'Can', 450, 10),
+  ('23232323-2323-2323-2323-232323231202', '22222222-2222-2222-2222-222222222212', '11111111-1111-1111-1111-111111111111', 'Draft', 16.0, 'Pub glass', 500, 20),
+  ('23232323-2323-2323-2323-232323231301', '22222222-2222-2222-2222-222222222213', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1400, 10),
+  ('23232323-2323-2323-2323-232323231401', '22222222-2222-2222-2222-222222222214', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1600, 10),
+  ('23232323-2323-2323-2323-232323231501', '22222222-2222-2222-2222-222222222215', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1100, 10),
+  ('23232323-2323-2323-2323-232323231601', '22222222-2222-2222-2222-222222222216', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1000, 10),
+  ('23232323-2323-2323-2323-232323231701', '22222222-2222-2222-2222-222222222217', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1300, 10),
+  ('23232323-2323-2323-2323-232323231801', '22222222-2222-2222-2222-222222222218', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1700, 10),
+  ('23232323-2323-2323-2323-232323231901', '22222222-2222-2222-2222-222222222219', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1600, 10),
+  ('23232323-2323-2323-2323-232323232001', '22222222-2222-2222-2222-222222222220', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1650, 10),
+  ('23232323-2323-2323-2323-232323232101', '22222222-2222-2222-2222-222222222221', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1500, 10),
+  ('23232323-2323-2323-2323-232323232201', '22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1550, 10),
+  ('23232323-2323-2323-2323-232323232301', '22222222-2222-2222-2222-222222222223', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 1200, 10),
+  ('23232323-2323-2323-2323-232323232401', '22222222-2222-2222-2222-222222222224', '11111111-1111-1111-1111-111111111111', 'Serving', null, null, 900, 10);
 
 insert into public.events (
   id,

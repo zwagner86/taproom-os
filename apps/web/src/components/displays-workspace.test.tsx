@@ -100,6 +100,7 @@ describe("displays workspace", () => {
         appUrl: "https://taproom.example",
         deletePlaylistAction: async () => {},
         deleteViewAction: async () => {},
+        displayContentCounts: { drinks: 12 },
         initialSearchParams: {
           content: "drinks",
           surface: "tv",
@@ -122,8 +123,36 @@ describe("displays workspace", () => {
     expect(markup).toContain("Content");
     expect(markup).toContain("Theme");
     expect(markup).toContain("Venue default");
+    expect(markup).toContain("Pagination");
+    expect(markup).toContain("This content has 12 records");
     expect(markup).toContain("Saved");
     expect(markup).toContain("Live preview");
+  });
+
+  it("defaults draft TV displays to page one with a page size of ten", () => {
+    const markup = renderToStaticMarkup(
+      createElement(DisplaysWorkspace, {
+        appUrl: "https://taproom.example",
+        deletePlaylistAction: async () => {},
+        deleteViewAction: async () => {},
+        initialSearchParams: {
+          content: "drinks",
+          surface: "tv",
+          tab: "views",
+          view: "new",
+        },
+        playlists: [tvPlaylist],
+        savePlaylistAction: async () => {},
+        saveViewAction: async () => {},
+        venueSlug: "demo-taproom",
+        views: [publicMenuView, tvDrinksView, embedEventsView],
+      }),
+    );
+
+    expect(markup).toContain("New display");
+    expect(markup).toContain("Pagination");
+    expect(markup).toContain("&quot;page&quot;:1");
+    expect(markup).toContain("&quot;pageSize&quot;:10");
   });
 
   it("renders a draft embed drawer from query-backed draft state", () => {

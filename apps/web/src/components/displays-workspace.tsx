@@ -107,6 +107,7 @@ export function DisplaysWorkspace({
   appUrl,
   deletePlaylistAction,
   deleteViewAction,
+  displayContentCounts = {},
   initialSearchParams,
   menuSections = [],
   playlists,
@@ -118,6 +119,7 @@ export function DisplaysWorkspace({
   appUrl: string;
   deletePlaylistAction: (formData: FormData) => void | Promise<void>;
   deleteViewAction: (formData: FormData) => void | Promise<void>;
+  displayContentCounts?: Partial<Record<DisplayContent, number>>;
   initialSearchParams: Record<string, string | string[] | undefined>;
   menuSections?: MenuSectionRecord[];
   playlists: DisplayPlaylistRecord[];
@@ -708,9 +710,10 @@ export function DisplaysWorkspace({
                           setViewFormState((current) => ({
                             ...current,
                             content: event.target.value as DisplayContent,
-                            options: getDefaultDisplayViewOptions(
+                            options: getContentChangeDisplayViewOptions(
                               drawerView?.surface ?? "tv",
                               event.target.value as DisplayContent,
+                              current.options,
                             ),
                           }))
                         }
@@ -729,6 +732,14 @@ export function DisplaysWorkspace({
 
                 <ViewSettingsFields
                   content={viewFormState.content}
+                  options={viewFormState.options}
+                  setOptions={(updater) =>
+                    setViewFormState((current) => ({ ...current, options: updater(current.options) }))
+                  }
+                  surface={drawerView?.surface ?? "tv"}
+                />
+                <ViewPaginationFields
+                  contentCount={displayContentCounts[viewFormState.content]}
                   options={viewFormState.options}
                   setOptions={(updater) =>
                     setViewFormState((current) => ({ ...current, options: updater(current.options) }))
@@ -983,7 +994,7 @@ function getInitialViewFormState({
       content: drawer.content,
       mode: "draft",
       name: "",
-      options: getDefaultDisplayViewOptions(drawer.surface, drawer.content),
+      options: getDraftDisplayViewOptions(drawer.surface, drawer.content),
       slug: "",
       slugDirty: false,
       viewId: null,
@@ -1006,10 +1017,40 @@ function getInitialViewFormState({
     content: drawer.content,
     mode: "empty",
     name: "",
-    options: getDefaultDisplayViewOptions(drawer.surface, drawer.content),
+    options: getDraftDisplayViewOptions(drawer.surface, drawer.content),
     slug: "",
     slugDirty: false,
     viewId: null,
+  };
+}
+
+function getDraftDisplayViewOptions(surface: DisplayViewDrawerState["surface"], content: DisplayContent) {
+  const options = getDefaultDisplayViewOptions(surface, content);
+
+  return surface === "tv"
+    ? {
+        ...options,
+        page: 1,
+        pageSize: 10,
+      }
+    : options;
+}
+
+function getContentChangeDisplayViewOptions(
+  surface: DisplayViewDrawerState["surface"],
+  content: DisplayContent,
+  currentOptions: DisplayViewOptions,
+) {
+  const options = getDefaultDisplayViewOptions(surface, content);
+
+  if (surface !== "tv" || !currentOptions.pageSize) {
+    return options;
+  }
+
+  return {
+    ...options,
+    page: currentOptions.page ?? 1,
+    pageSize: currentOptions.pageSize,
   };
 }
 
@@ -1487,6 +1528,111 @@ function ViewSettingsFields({
               : `Settings stay locked to ${DISPLAY_CONTENT_LABELS[content].toLowerCase()} on the ${DISPLAY_SURFACE_LABELS[surface].toLowerCase()} surface.`}
           </FieldHint>
         </div>
+      </div>
+    </EditorSection>
+  );
+}
+
+function ViewPaginationFields({
+  contentCount,
+  options,
+  setOptions,
+  surface,
+}: {
+  contentCount?: number;
+  options: DisplayViewOptions;
+  setOptions: (updater: (current: DisplayViewOptions) => DisplayViewOptions) => void;
+  surface: DisplayViewDrawerState["surface"];
+}) {
+  if (surface !== "tv") {
+    return null;
+  }
+
+  const paginationEnabled = Boolean(options.pageSize);
+  const pageSize = options.pageSize ?? 10;
+  const page = options.page ?? 1;
+  const totalPages = contentCount && paginationEnabled ? Math.max(1, Math.ceil(contentCount / pageSize)) : null;
+  const shouldSuggestPagination = !paginationEnabled && contentCount !== undefined && contentCount > 10;
+
+  return (
+    <EditorSection
+      description="Create page-specific display presets for fixed TV screens, playlists, or multiple screens over a bar."
+      title="Pagination"
+    >
+      <div className="rounded-[20px] border bg-white/75 p-4" style={{ borderColor: "var(--c-border)" }}>
+        <Toggle
+          checked={paginationEnabled}
+          id="display-pagination-enabled"
+          label="Limit this display to one page"
+          onChange={(checked) =>
+            setOptions((current) => {
+              if (!checked) {
+                const { page: _page, pageSize: _pageSize, ...rest } = current;
+                return rest;
+              }
+
+              return {
+                ...current,
+                page: current.page ?? 1,
+                pageSize: current.pageSize ?? 10,
+              };
+            })
+          }
+        />
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="display-page">Page</FieldLabel>
+            <Input
+              className="bg-white"
+              disabled={!paginationEnabled}
+              id="display-page"
+              max={999}
+              min={1}
+              onChange={(event) =>
+                setOptions((current) => ({
+                  ...current,
+                  page: Math.max(1, Math.min(999, Number(event.target.value || 1))),
+                }))
+              }
+              type="number"
+              value={page}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="display-page-size">Page size</FieldLabel>
+            <Input
+              className="bg-white"
+              disabled={!paginationEnabled}
+              id="display-page-size"
+              max={60}
+              min={1}
+              onChange={(event) =>
+                setOptions((current) => ({
+                  ...current,
+                  pageSize: Math.max(1, Math.min(60, Number(event.target.value || 10))),
+                }))
+              }
+              type="number"
+              value={pageSize}
+            />
+          </div>
+        </div>
+
+        {totalPages ? (
+          <FieldHint className="mt-3">
+            This preset will show page {Math.min(page, totalPages)} of {totalPages} for the current content count.
+          </FieldHint>
+        ) : shouldSuggestPagination ? (
+          <FieldHint className="mt-3">
+            This content has {contentCount} records. TVs cannot scroll, so page-specific presets may be useful.
+          </FieldHint>
+        ) : (
+          <FieldHint className="mt-3">
+            Leave pagination off to show all matching records in one display.
+          </FieldHint>
+        )}
       </div>
     </EditorSection>
   );

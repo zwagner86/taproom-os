@@ -249,7 +249,9 @@ function DisplayItems({
     return <DisplayEmptyState config={config} emoji="🍺" message="Nothing is published for this display yet." />;
   }
 
-  const grouped = groupItems(items, config);
+  const sortedItems = flattenItemGroups(groupItems(items, config));
+  const pagination = paginateDisplayRecords(sortedItems, config);
+  const grouped = groupItems(pagination.records, config);
 
   if (config.surface === "tv") {
     return (
@@ -301,6 +303,7 @@ function DisplayItems({
             </div>
           </section>
         ))}
+        <DisplayPaginationIndicator config={config} pagination={pagination} />
       </div>
     );
   }
@@ -374,42 +377,47 @@ function DisplayEvents({
     return <DisplayEmptyState config={config} emoji="🎟" message="No published events yet." />;
   }
 
+  const pagination = paginateDisplayRecords(events, config);
+
   if (config.surface === "tv") {
     return (
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {events.map((event) => (
-          <article
-            className="rounded-[22px] border p-5"
-            key={event.id}
-            style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
-          >
-            <div className="mb-3 text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-              {formatDate(event.starts_at)}
-            </div>
-            <h2 className="text-[27px] font-black leading-tight" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
-              {event.title}
-            </h2>
-            {config.showDescriptions && event.description && (
-              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-                {event.description}
-              </p>
-            )}
-            <div className="mt-4">
-              <Badge variant={event.price_cents && event.price_cents > 0 ? "accent" : "success"}>
-                {event.price_cents && event.price_cents > 0
-                  ? formatCurrency(event.price_cents, event.currency)
-                  : "Free RSVP"}
-              </Badge>
-            </div>
-          </article>
-        ))}
+      <div className="flex flex-col gap-7">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {pagination.records.map((event) => (
+            <article
+              className="rounded-[22px] border p-5"
+              key={event.id}
+              style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
+            >
+              <div className="mb-3 text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                {formatDate(event.starts_at)}
+              </div>
+              <h2 className="text-[27px] font-black leading-tight" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
+                {event.title}
+              </h2>
+              {config.showDescriptions && event.description && (
+                <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+                  {event.description}
+                </p>
+              )}
+              <div className="mt-4">
+                <Badge variant={event.price_cents && event.price_cents > 0 ? "accent" : "success"}>
+                  {event.price_cents && event.price_cents > 0
+                    ? formatCurrency(event.price_cents, event.currency)
+                    : "Free RSVP"}
+                </Badge>
+              </div>
+            </article>
+          ))}
+        </div>
+        <DisplayPaginationIndicator config={config} pagination={pagination} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {events.map((event) => (
+      {pagination.records.map((event) => (
           <Card
           className="shadow-[0_18px_48px_rgba(80,54,31,0.06)]"
           key={event.id}
@@ -478,41 +486,46 @@ function DisplayMemberships({
     return <DisplayEmptyState config={config} emoji="🏷" message="No public membership plans are active yet." />;
   }
 
+  const pagination = paginateDisplayRecords(plans, config);
+
   if (config.surface === "tv") {
     return (
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {plans.map((plan) => (
-          <article
-            className="rounded-[22px] border p-5"
-            key={plan.id}
-            style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
-          >
-            <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-              {venue.membership_label}
-            </div>
-            <h2 className="text-[26px] font-black" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
-              {plan.name}
-            </h2>
-            <div className="mt-2 text-[26px] font-black" style={{ color: "var(--c-text)" }}>
-              {formatCurrency(plan.price_cents, plan.currency)}
-              <span className="ml-1 text-[13px] font-medium uppercase tracking-[0.1em]" style={{ color: "var(--c-muted)" }}>
-                / {plan.billing_interval}
-              </span>
-            </div>
-            {config.showDescriptions && plan.description && (
-              <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
-                {plan.description}
-              </p>
-            )}
-          </article>
-        ))}
+      <div className="flex flex-col gap-7">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {pagination.records.map((plan) => (
+            <article
+              className="rounded-[22px] border p-5"
+              key={plan.id}
+              style={{ background: "var(--c-card)", borderColor: "var(--c-border)" }}
+            >
+              <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                {venue.membership_label}
+              </div>
+              <h2 className="text-[26px] font-black" style={{ color: "var(--c-text)", fontFamily: "Lora, serif" }}>
+                {plan.name}
+              </h2>
+              <div className="mt-2 text-[26px] font-black" style={{ color: "var(--c-text)" }}>
+                {formatCurrency(plan.price_cents, plan.currency)}
+                <span className="ml-1 text-[13px] font-medium uppercase tracking-[0.1em]" style={{ color: "var(--c-muted)" }}>
+                  / {plan.billing_interval}
+                </span>
+              </div>
+              {config.showDescriptions && plan.description && (
+                <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--c-muted)" }}>
+                  {plan.description}
+                </p>
+              )}
+            </article>
+          ))}
+        </div>
+        <DisplayPaginationIndicator config={config} pagination={pagination} />
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      {plans.map((plan) => {
+      {pagination.records.map((plan) => {
         const action = startMembershipCheckoutAction.bind(null, venueSlug, plan.id);
         const canShowForm = Boolean(config.showMembershipForm && paymentCapability?.canSellMemberships);
 
@@ -606,6 +619,64 @@ function DisplayEmptyState({
   );
 }
 
+function DisplayPaginationIndicator<T>({
+  config,
+  pagination,
+}: {
+  config: DisplayViewConfig;
+  pagination: DisplayPaginationResult<T>;
+}) {
+  if (config.surface !== "tv" || !pagination.active) {
+    return null;
+  }
+
+  return (
+    <div
+      className="self-end rounded-full border px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em]"
+      style={{ borderColor: "var(--c-border)", color: "var(--c-muted)" }}
+    >
+      Page {pagination.page} of {pagination.totalPages}
+    </div>
+  );
+}
+
+type DisplayPaginationResult<T> = {
+  active: boolean;
+  page: number;
+  pageSize: number | null;
+  records: T[];
+  totalCount: number;
+  totalPages: number;
+};
+
+function paginateDisplayRecords<T>(records: T[], config: DisplayViewConfig): DisplayPaginationResult<T> {
+  const totalCount = records.length;
+
+  if (!config.pageSize) {
+    return {
+      active: false,
+      page: 1,
+      pageSize: null,
+      records,
+      totalCount,
+      totalPages: 1,
+    };
+  }
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / config.pageSize));
+  const page = Math.min(Math.max(config.page ?? 1, 1), totalPages);
+  const start = (page - 1) * config.pageSize;
+
+  return {
+    active: true,
+    page,
+    pageSize: config.pageSize,
+    records: records.slice(start, start + config.pageSize),
+    totalCount,
+    totalPages,
+  };
+}
+
 function filterItemsByContent(items: ItemRecord[], config: DisplayViewConfig) {
   const selectedSectionIds = new Set(config.sectionIds ?? []);
   const bySelectedSections = selectedSectionIds.size > 0
@@ -626,6 +697,10 @@ function filterItemsByContent(items: ItemRecord[], config: DisplayViewConfig) {
   }
 
   return visibleItems;
+}
+
+function flattenItemGroups(groups: Array<{ items: ItemRecord[] }>) {
+  return groups.flatMap((group) => group.items);
 }
 
 function groupItems(items: ItemRecord[], config: DisplayViewConfig) {

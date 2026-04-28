@@ -12,6 +12,8 @@ export const displayAspectSchema = z.enum(["auto", "landscape", "portrait"]);
 export const displayLinkTargetSchema = z.enum(["same-tab", "new-tab"]);
 export const displayThemeSchema = z.enum(["venue-default", "light", "dark"]);
 export const displayTransitionSchema = z.literal("fade");
+const displayPageSchema = z.coerce.number().int().min(1).transform((value) => Math.min(value, 999));
+const displayPageSizeSchema = z.coerce.number().int().min(1).transform((value) => Math.min(value, 60));
 
 export const displayViewOptionsSchema = z.object({
   density: displayDensitySchema.default("comfortable"),
@@ -31,6 +33,8 @@ export const displayViewOptionsSchema = z.object({
   showFollowCard: z.boolean().default(true),
   showMembershipForm: z.boolean().default(false),
   sectionIds: z.array(z.string().uuid()).default([]),
+  page: displayPageSchema.optional(),
+  pageSize: displayPageSizeSchema.optional(),
   linkTarget: displayLinkTargetSchema.default("same-tab"),
 });
 
@@ -201,6 +205,8 @@ export function extractDisplayViewOptions(config: DisplayViewConfig): DisplayVie
     showTagline: config.showTagline,
     showVenueName: config.showVenueName,
     sectionIds: config.sectionIds,
+    page: config.page,
+    pageSize: config.pageSize,
   });
 }
 
@@ -258,6 +264,12 @@ export function applyDisplaySurfaceRules(config: DisplayViewConfig): DisplayView
     next.showMembershipForm = false;
   }
 
+  if (!next.pageSize) {
+    delete next.page;
+  } else if (!next.page) {
+    next.page = 1;
+  }
+
   return next;
 }
 
@@ -285,6 +297,8 @@ export function parseDisplayViewConfigFromSearchParams(
     showTagline: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showTagline)),
     showVenueName: parseBooleanValue(getParam(searchParams, BOOLEAN_QUERY_KEYS.showVenueName)),
     sectionIds: parseSectionIds(getParam(searchParams, "sections")),
+    page: parsePositiveInteger(getParam(searchParams, "page"), 999),
+    pageSize: parsePositiveInteger(getParam(searchParams, "pageSize"), 60),
     surface: parseEnumValue(displaySurfaceSchema, getParam(searchParams, "surface")),
   };
 
@@ -315,6 +329,8 @@ export function serializeDisplayViewConfigToSearchParams(
   appendParam(params, "aspect", config.aspect, defaults?.aspect);
   appendParam(params, "linkTarget", config.linkTarget, defaults?.linkTarget);
   appendParam(params, "theme", config.theme, defaults?.theme);
+  appendNumberParam(params, "page", config.page, defaults?.page);
+  appendNumberParam(params, "pageSize", config.pageSize, defaults?.pageSize);
 
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showVenueName, config.showVenueName, defaults?.showVenueName);
   appendBooleanParam(params, BOOLEAN_QUERY_KEYS.showLogo, config.showLogo, defaults?.showLogo);
@@ -378,6 +394,17 @@ function appendBooleanParam(
   }
 }
 
+function appendNumberParam(
+  params: URLSearchParams,
+  key: string,
+  value: number | undefined,
+  defaultValue?: number,
+) {
+  if (value !== undefined && (defaultValue === undefined || value !== defaultValue)) {
+    params.set(key, String(value));
+  }
+}
+
 function getParam(searchParams: SearchParamInput, key: string) {
   if (searchParams instanceof URLSearchParams) {
     return searchParams.get(key) ?? undefined;
@@ -401,6 +428,19 @@ function parseBooleanValue(value: string | undefined) {
   }
 
   return undefined;
+}
+
+function parsePositiveInteger(value: string | undefined, max: number) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return undefined;
+  }
+
+  return Math.min(parsed, max);
 }
 
 function parseSectionIds(value: string | undefined) {

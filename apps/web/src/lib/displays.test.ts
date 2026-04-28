@@ -22,6 +22,8 @@ describe("display helpers", () => {
       showDescriptions: false,
       showLogo: false,
       showVenueName: false,
+      page: 2,
+      pageSize: 10,
       theme: "dark" as const,
     };
 
@@ -76,6 +78,24 @@ describe("display helpers", () => {
     );
 
     expect(config.theme).toBe("venue-default");
+  });
+
+  it("ignores page without page size and clamps large pagination values", () => {
+    const config = parseDisplayViewConfigFromSearchParams(
+      { page: "3", pageSize: "1000" },
+      getDefaultDisplayViewConfig("tv", "menu"),
+    );
+
+    expect(config.page).toBe(3);
+    expect(config.pageSize).toBe(60);
+
+    const withoutSize = parseDisplayViewConfigFromSearchParams(
+      { page: "2" },
+      getDefaultDisplayViewConfig("tv", "menu"),
+    );
+
+    expect(withoutSize.page).toBeUndefined();
+    expect(withoutSize.pageSize).toBeUndefined();
   });
 
   it("builds ad hoc, saved, and canonical public paths", () => {
