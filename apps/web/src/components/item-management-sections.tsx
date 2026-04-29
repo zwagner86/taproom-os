@@ -1,9 +1,7 @@
-"use client";
-
 import { Beer, Package, Utensils } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Badge, Button, Card, DataTable, EmptyState } from "@/components/ui";
+import { Badge, Card, DataTable, EmptyState } from "@/components/ui";
 import { DEFAULT_MENU_SECTION_NAMES, ITEM_STATUS_LABELS, type CatalogItemStatus, type CatalogItemType } from "@/lib/item-management";
 
 export type ItemManagementRecord = {
@@ -45,7 +43,6 @@ export function ItemManagementSection({
   renderActions: (item: ItemManagementRecord) => ReactNode;
   section: ItemManagementMenuSection;
 }) {
-  const activeCount = items.filter((item) => item.status === "active").length;
   const visibleCount = items.filter((item) => item.status !== "hidden").length;
 
   return (
