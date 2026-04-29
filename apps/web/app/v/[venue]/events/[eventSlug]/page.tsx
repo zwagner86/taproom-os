@@ -4,10 +4,11 @@ import { notFound } from "next/navigation";
 
 import { Alert, Badge, Button, Card, Input, Label } from "@/components/ui";
 import { PublicFollowCard } from "@/components/public-follow-card";
+import { PublicPageAttribution } from "@/components/public-page-attribution";
 import { getPaidEventGateCopy } from "@/lib/venue-payment-capability";
 import { createFreeEventBookingAction, createPaidEventCheckoutAction } from "@/server/actions/events";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { getPublicVenueEventBySlug } from "@/server/repositories/events";
+import { getPublicVenueEventByKey } from "@/server/repositories/events";
 import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 export default async function PublicEventDetailPage({
@@ -17,9 +18,9 @@ export default async function PublicEventDetailPage({
   params: Promise<{ eventSlug: string; venue: string }>;
   searchParams: Promise<{ checkout?: string; error?: string; message?: string }>;
 }) {
-  const { eventSlug, venue } = await params;
+  const { eventSlug: eventKey, venue } = await params;
   const { checkout, error, message } = await searchParams;
-  const { event, venue: venueRecord } = await getPublicVenueEventBySlug(venue, eventSlug);
+  const { event, venue: venueRecord } = await getPublicVenueEventByKey(venue, eventKey);
 
   if (!venueRecord || !event) {
     notFound();
@@ -27,8 +28,8 @@ export default async function PublicEventDetailPage({
 
   const paymentCapability = await getVenuePaymentCapability(venueRecord.id);
   const paidEventUnavailable = event.price_cents !== null && !paymentCapability.canSellPaidEvents;
-  const rsvpAction = createFreeEventBookingAction.bind(null, venue, eventSlug);
-  const paidAction = createPaidEventCheckoutAction.bind(null, venue, eventSlug);
+  const rsvpAction = createFreeEventBookingAction.bind(null, venue, eventKey);
+  const paidAction = createPaidEventCheckoutAction.bind(null, venue, eventKey);
   const isFree = event.price_cents === null || event.price_cents === 0;
 
   return (
@@ -123,8 +124,10 @@ export default async function PublicEventDetailPage({
           </Card>
         )}
 
-        <PublicFollowCard returnPath={`/v/${venue}/events/${eventSlug}`} venueSlug={venue} title="Get future event drops" />
+        <PublicFollowCard returnPath={`/v/${venue}/events/${event.id}`} venueSlug={venue} title="Get future event drops" />
       </div>
+
+      <PublicPageAttribution />
     </main>
   );
 }

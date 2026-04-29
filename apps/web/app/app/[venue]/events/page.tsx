@@ -169,7 +169,7 @@ export default async function VenueEventsPage({
                     </Link>
                     <Link
                       className="font-semibold"
-                      href={`/v/${venue}/events/${event.slug}` as Route}
+                      href={`/v/${venue}/events/${event.id}` as Route}
                       style={{ color: "var(--accent)" }}
                     >
                       Public page →

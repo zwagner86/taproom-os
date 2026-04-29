@@ -105,13 +105,14 @@ export async function updateEventAction(venueSlug: string, formData: FormData) {
   redirect(`/app/${venueSlug}/events?message=${encodeURIComponent(warning ?? "Event updated.")}`);
 }
 
-export async function createFreeEventBookingAction(venueSlug: string, eventSlug: string, formData: FormData) {
-  const { event, venue } = await getPublicEventOrRedirect(venueSlug, eventSlug);
+export async function createFreeEventBookingAction(venueSlug: string, eventKey: string, formData: FormData) {
+  const { event, venue } = await getPublicEventOrRedirect(venueSlug, eventKey);
   const partySize = parsePositiveInteger(formData.get("party_size")) ?? 1;
   const reservedCount = await getReservedBookingCountForEvent(event.id);
+  const eventPath = `/v/${venueSlug}/events/${event.id}`;
 
   if (!hasCapacityRemaining(event.capacity, reservedCount, partySize)) {
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent("That event is sold out.")}`);
+    redirect(`${eventPath}?error=${encodeURIComponent("That event is sold out.")}`);
   }
 
   const booking = await createEventBookingAdmin({
@@ -145,31 +146,32 @@ export async function createFreeEventBookingAction(venueSlug: string, eventSlug:
   }
 
   revalidateEventPaths(venueSlug, event.id, event.slug);
-  redirect(`/v/${venueSlug}/events/${eventSlug}?message=${encodeURIComponent("RSVP confirmed.")}`);
+  redirect(`${eventPath}?message=${encodeURIComponent("RSVP confirmed.")}`);
 }
 
-export async function createPaidEventCheckoutAction(venueSlug: string, eventSlug: string, formData: FormData) {
-  const { event, venue } = await getPublicEventOrRedirect(venueSlug, eventSlug);
+export async function createPaidEventCheckoutAction(venueSlug: string, eventKey: string, formData: FormData) {
+  const { event, venue } = await getPublicEventOrRedirect(venueSlug, eventKey);
   const capability = await getVenuePaymentCapability(venue.id);
   const connection = await getStripeConnectionForVenue(venue.id);
+  const eventPath = `/v/${venueSlug}/events/${event.id}`;
 
   if (!capability.canSellPaidEvents) {
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent(getPaidEventGateCopy())}`);
+    redirect(`${eventPath}?error=${encodeURIComponent(getPaidEventGateCopy())}`);
   }
 
   if (!connection?.stripe_account_id) {
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent(getPaidEventGateCopy())}`);
+    redirect(`${eventPath}?error=${encodeURIComponent(getPaidEventGateCopy())}`);
   }
 
   if (event.price_cents === null) {
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent("This event does not require paid checkout.")}`);
+    redirect(`${eventPath}?error=${encodeURIComponent("This event does not require paid checkout.")}`);
   }
 
   const partySize = parsePositiveInteger(formData.get("party_size")) ?? 1;
   const reservedCount = await getReservedBookingCountForEvent(event.id);
 
   if (!hasCapacityRemaining(event.capacity, reservedCount, partySize)) {
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent("That event is sold out.")}`);
+    redirect(`${eventPath}?error=${encodeURIComponent("That event is sold out.")}`);
   }
 
   const booking = await createEventBookingAdmin({
@@ -191,7 +193,7 @@ export async function createPaidEventCheckoutAction(venueSlug: string, eventSlug
     const session = await getPaymentsProvider().createEventCheckoutSession({
       amountCents: booking.total_price_cents,
       applicationFeePercent: getEnv().STRIPE_APPLICATION_FEE_PERCENT,
-      cancelUrl: `${getEnv().NEXT_PUBLIC_APP_URL}/v/${venueSlug}/events/${eventSlug}?checkout=cancel`,
+      cancelUrl: `${getEnv().NEXT_PUBLIC_APP_URL}${eventPath}?checkout=cancel`,
       connectedAccountId: connection.stripe_account_id,
       currency: event.currency,
       customerEmail: booking.purchaser_email ?? undefined,
@@ -203,7 +205,7 @@ export async function createPaidEventCheckoutAction(venueSlug: string, eventSlug
         venue_id: venue.id,
         venue_slug: venueSlug,
       },
-      successUrl: `${getEnv().NEXT_PUBLIC_APP_URL}/v/${venueSlug}/events/${eventSlug}?checkout=success`,
+      successUrl: `${getEnv().NEXT_PUBLIC_APP_URL}${eventPath}?checkout=success`,
       venueId: venue.id,
       venueName: venue.name,
     });
@@ -220,7 +222,7 @@ export async function createPaidEventCheckoutAction(venueSlug: string, eventSlug
     });
 
     const message = error instanceof Error ? error.message : "Unable to start checkout.";
-    redirect(`/v/${venueSlug}/events/${eventSlug}?error=${encodeURIComponent(message)}`);
+    redirect(`${eventPath}?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -407,7 +409,6 @@ function buildUpdateEventPayload(formData: FormData, wasPublished: boolean, canS
       image_url: normalizeOptionalString(formData.get("image_url")),
       price_cents: priceCents,
       published,
-      slug: slugify(String(formData.get("slug") ?? title)),
       starts_at: normalizeRequiredDate(formData.get("starts_at")),
       status,
       title,
@@ -418,11 +419,11 @@ function buildUpdateEventPayload(formData: FormData, wasPublished: boolean, canS
   };
 }
 
-async function getPublicEventOrRedirect(venueSlug: string, eventSlug: string) {
+async function getPublicEventOrRedirect(venueSlug: string, eventKey: string) {
   const { event, venue } = await (async () => {
     const publicData = await listPublicVenueEvents(venueSlug);
     return {
-      event: publicData.events.find((entry) => entry.slug === eventSlug) ?? null,
+      event: publicData.events.find((entry) => entry.id === eventKey || entry.slug === eventKey) ?? null,
       venue: publicData.venue,
     };
   })();
@@ -432,7 +433,7 @@ async function getPublicEventOrRedirect(venueSlug: string, eventSlug: string) {
   }
 
   if (isDemoVenueRecord(venue)) {
-    redirectForDemoVenue(`/v/${venueSlug}/events/${eventSlug}`);
+    redirectForDemoVenue(`/v/${venueSlug}/events/${eventKey}`);
   }
 
   return { event, venue };

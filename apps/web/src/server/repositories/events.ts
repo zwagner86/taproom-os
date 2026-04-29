@@ -77,13 +77,15 @@ export async function getVenueEventByIdAdmin(eventId: string) {
   return data;
 }
 
-export async function getPublicVenueEventBySlug(slug: string, eventSlug: string) {
+export async function getPublicVenueEventByKey(slug: string, eventKey: string) {
   const { venue, events } = await listPublicVenueEvents(slug);
   return {
-    event: events.find((entry) => entry.slug === eventSlug) ?? null,
+    event: events.find((entry) => entry.id === eventKey || entry.slug === eventKey) ?? null,
     venue,
   };
 }
+
+export const getPublicVenueEventBySlug = getPublicVenueEventByKey;
 
 export async function listEventBookings(venueId: string, eventId: string) {
   const supabase = await createServerSupabaseClient();

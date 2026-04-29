@@ -348,7 +348,7 @@ function ShellNav({
               )}
               <Link
                 className="flex items-center gap-2 text-xs font-medium text-white/55 transition-colors hover:text-white"
-                href={`/v/${venueSlug}` as `/${string}`}
+                href={`/v/${venueSlug}/menu` as `/${string}`}
                 onClick={onNavigate}
               >
                 <span>Open public venue</span>

@@ -179,7 +179,7 @@ export function DemoVenueEventsPage({
                     </Link>
                     <Link
                       className="font-semibold"
-                      href={`/v/${initialVenueSlug}/events/${event.slug}` as Route}
+                      href={`/v/${initialVenueSlug}/events/${event.id}` as Route}
                       style={{ color: "var(--accent)" }}
                     >
                       Public page →

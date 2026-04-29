@@ -19,6 +19,7 @@ import type { VenueRow } from "@/server/repositories/venues";
 import { getVenuePaymentCapability } from "@/server/services/payment-capability";
 
 import { PublicFollowCard } from "./public-follow-card";
+import { PublicPageAttribution } from "./public-page-attribution";
 
 type ItemRecord = VenueItemRecord;
 
@@ -233,6 +234,8 @@ function DisplayShell({
         {alerts && <div className="mb-5">{alerts}</div>}
 
         {children}
+
+        {!isTv && !isEmbed && <PublicPageAttribution />}
       </div>
     </main>
   );
@@ -454,7 +457,7 @@ function DisplayEvents({
               </Badge>
               {config.showCtas && (
                 <Link
-                  href={`/v/${venueSlug}/events/${event.slug}`}
+                  href={`/v/${venueSlug}/events/${event.id}`}
                   style={{ color: "var(--accent)" }}
                   target={config.linkTarget === "new-tab" ? "_blank" : undefined}
                 >
