@@ -4,7 +4,7 @@ type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
 export type CoreShareDestinationId = "events" | "follow" | "memberships" | "menu";
 export type ShareDestinationKind = CoreShareDestinationId | "event";
-export type PrintLayout = "poster" | "tent";
+export type PrintLayout = "letter" | "half-letter" | "photo-4x6";
 
 export type ShareDestination = {
   description: string;
@@ -131,7 +131,13 @@ export function parsePrintDestinationKey(destination: string) {
 }
 
 export function resolvePrintLayout(value: string | string[] | undefined): PrintLayout {
-  return value === "poster" ? "poster" : "tent";
+  const layout = Array.isArray(value) ? value[0] : value;
+
+  if (layout === "half-letter" || layout === "photo-4x6") {
+    return layout;
+  }
+
+  return "letter";
 }
 
 function isCoreShareDestination(value: string): value is CoreShareDestinationId {

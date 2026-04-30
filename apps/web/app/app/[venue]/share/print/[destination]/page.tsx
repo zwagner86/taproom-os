@@ -3,17 +3,8 @@ export const dynamic = "force-dynamic";
 import QRCode from "react-qr-code";
 import { notFound } from "next/navigation";
 
-import { getEnv } from "@/env";
-import {
-  buildCoreShareDestinations,
-  buildEventShareDestination,
-  parsePrintDestinationKey,
-  resolvePrintLayout,
-  type PrintLayout,
-  type ShareDestination,
-} from "@/lib/share-kit";
-import { getVenueEventById } from "@/server/repositories/events";
-import { requireVenueAccess } from "@/server/repositories/venues";
+import { resolvePrintLayout, type PrintLayout, type ShareDestination } from "@/lib/share-kit";
+import { resolveSharePrintDestination } from "@/server/share-print";
 
 export default async function SharePrintPage({
   params,
@@ -23,111 +14,105 @@ export default async function SharePrintPage({
   searchParams: Promise<{ layout?: string | string[] }>;
 }) {
   const [{ destination, venue }, resolvedSearchParams] = await Promise.all([params, searchParams]);
-  const access = await requireVenueAccess(venue);
-  const parsed = parsePrintDestinationKey(destination);
+  const resolvedDestination = await resolveSharePrintDestination({
+    destinationKey: destination,
+    venueSlug: venue,
+  });
 
-  if (!parsed) {
-    notFound();
-  }
-
-  const appUrl = getEnv().NEXT_PUBLIC_APP_URL;
-  const shareDestination =
-    parsed.kind === "event"
-      ? await resolveEventDestination({
-          appUrl,
-          eventId: parsed.eventId,
-          venueId: access.venue.id,
-          venueSlug: venue,
-        })
-      : buildCoreShareDestinations({ appUrl, venueSlug: venue }).find((entry) => entry.id === parsed.id) ?? null;
-
-  if (!shareDestination) {
+  if (!resolvedDestination) {
     notFound();
   }
 
   const layout = resolvePrintLayout(resolvedSearchParams.layout);
+  const printLayout = getPrintLayoutConfig(layout);
 
   return (
-    <main className="min-h-screen bg-white text-neutral-950">
-      <style>{printStyles(access.venue.accent_color, layout)}</style>
-      {layout === "poster" ? (
-        <PosterTemplate destination={shareDestination} logoUrl={access.venue.logo_url} venueName={access.venue.name} />
-      ) : (
-        <TableTentTemplate destination={shareDestination} logoUrl={access.venue.logo_url} venueName={access.venue.name} />
-      )}
+    <main className="bg-white text-neutral-950">
+      <style>{printStyles(resolvedDestination.access.venue.accent_color, printLayout)}</style>
+      <PrintTemplate
+        className={printLayout.className}
+        destination={resolvedDestination.destination}
+        inserts={printLayout.inserts}
+        logoUrl={resolvedDestination.access.venue.logo_url}
+        qrSize={printLayout.qrSize}
+        venueName={resolvedDestination.access.venue.name}
+      />
     </main>
   );
 }
 
-async function resolveEventDestination({
-  appUrl,
-  eventId,
-  venueId,
-  venueSlug,
-}: {
-  appUrl: string;
-  eventId: string;
-  venueId: string;
-  venueSlug: string;
-}) {
-  const event = await getVenueEventById(venueId, eventId);
+type PrintLayoutConfig = {
+  className: string;
+  inserts: number;
+  pageSize: string;
+  qrSize: number;
+};
 
-  if (!event || !event.published || event.status !== "published") {
-    return null;
+function getPrintLayoutConfig(layout: PrintLayout): PrintLayoutConfig {
+  switch (layout) {
+    case "half-letter":
+      return {
+        className: "print-sheet-half-letter",
+        inserts: 2,
+        pageSize: "8.5in 11in",
+        qrSize: 260,
+      };
+    case "photo-4x6":
+      return {
+        className: "print-sheet-photo-4x6",
+        inserts: 2,
+        pageSize: "8.5in 11in",
+        qrSize: 220,
+      };
+    case "letter":
+      return {
+        className: "print-sheet-letter",
+        inserts: 1,
+        pageSize: "8.5in 11in",
+        qrSize: 340,
+      };
   }
-
-  return buildEventShareDestination({ appUrl, event, venueSlug });
 }
 
-function TableTentTemplate({
+function PrintTemplate({
+  className,
   destination,
+  inserts,
   logoUrl,
+  qrSize,
   venueName,
 }: {
+  className: string;
   destination: ShareDestination;
+  inserts: number;
   logoUrl: string | null;
+  qrSize: number;
   venueName: string;
 }) {
   return (
-    <div className="print-sheet print-sheet-tent">
-      <PrintPanel destination={destination} flipped logoUrl={logoUrl} qrSize={210} venueName={venueName} />
-      <div className="fold-line" />
-      <PrintPanel destination={destination} logoUrl={logoUrl} qrSize={210} venueName={venueName} />
-    </div>
-  );
-}
-
-function PosterTemplate({
-  destination,
-  logoUrl,
-  venueName,
-}: {
-  destination: ShareDestination;
-  logoUrl: string | null;
-  venueName: string;
-}) {
-  return (
-    <div className="print-sheet print-sheet-poster">
-      <PrintPanel destination={destination} logoUrl={logoUrl} qrSize={320} venueName={venueName} />
+    <div className={`print-sheet ${className}`}>
+      {Array.from({ length: inserts }, (_, index) => (
+        <div className="print-insert" key={index}>
+          <PrintPanel destination={destination} logoUrl={logoUrl} qrSize={qrSize} venueName={venueName} />
+        </div>
+      ))}
     </div>
   );
 }
 
 function PrintPanel({
   destination,
-  flipped = false,
   logoUrl,
   qrSize,
   venueName,
 }: {
   destination: ShareDestination;
-  flipped?: boolean;
   logoUrl: string | null;
   qrSize: number;
   venueName: string;
 }) {
   return (
-    <section className={flipped ? "print-panel flipped" : "print-panel"}>
+    <section className="print-panel">
       <div className="brand">
         {logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -171,19 +156,18 @@ function printCallout(kind: ShareDestination["kind"]) {
   }
 }
 
-function printStyles(accentColor: string, layout: PrintLayout) {
-  const pageSize = layout === "poster" ? "letter portrait" : "letter landscape";
-
+function printStyles(accentColor: string, layout: PrintLayoutConfig) {
   return `
     :root { --print-accent: ${accentColor || "#C96B2C"}; }
-    @page { margin: 0.35in; size: ${pageSize}; }
+    @page { margin: 0; size: ${layout.pageSize}; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
     body { background: white; }
-    .print-sheet { min-height: 100vh; background: white; color: #17120d; }
-    .print-sheet-tent { display: grid; grid-template-rows: 1fr 1px 1fr; min-height: calc(100vh - 0.7in); }
-    .print-sheet-poster { display: flex; min-height: calc(100vh - 0.7in); }
-    .fold-line { border-top: 1px dashed #b9afa5; }
-    .print-panel { align-items: center; display: flex; flex: 1; flex-direction: column; justify-content: center; padding: 0.25in; text-align: center; }
-    .print-panel.flipped { transform: rotate(180deg); }
+    .print-sheet { background: white; color: #17120d; display: flex; height: 11in; position: relative; width: 8.5in; }
+    .print-insert { align-items: center; display: flex; justify-content: center; position: relative; }
+    .print-insert::after { border: 1px dashed #d8cfc6; content: ""; inset: 0; pointer-events: none; position: absolute; }
+    .print-sheet-letter .print-insert::after { display: none; }
+    .print-panel { align-items: center; display: flex; flex-direction: column; height: 100%; justify-content: center; overflow: hidden; padding: 0.35in; text-align: center; width: 100%; }
     .brand { align-items: center; display: flex; gap: 0.18in; justify-content: center; margin-bottom: 0.18in; }
     .brand-logo { border: 1px solid #e5ded6; border-radius: 0.13in; height: 0.7in; object-fit: cover; width: 0.7in; }
     .venue-name { color: var(--print-accent); font-size: 0.16in; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -192,14 +176,28 @@ function printStyles(accentColor: string, layout: PrintLayout) {
     .qr-box { background: white; border: 1px solid #e7ded4; border-radius: 0.18in; padding: 0.18in; }
     .print-url { color: #5f554d; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.115in; margin-top: 0.18in; max-width: 5.6in; overflow-wrap: anywhere; }
     footer { color: #91877e; font-size: 0.12in; font-weight: 600; margin-top: 0.16in; }
+    .print-sheet-letter .print-insert { height: 11in; width: 8.5in; }
+    .print-sheet-half-letter { flex-direction: column; }
+    .print-sheet-half-letter::before { border-top: 1px dashed #b9afa5; content: ""; left: 0; position: absolute; right: 0; top: 5.5in; z-index: 2; }
+    .print-sheet-half-letter .print-insert { height: 5.5in; width: 8.5in; }
+    .print-sheet-half-letter .print-panel { height: 8.5in; left: 50%; padding: 0.32in; position: absolute; top: 50%; transform: translate(-50%, -50%) rotate(90deg); transform-origin: center; width: 5.5in; }
+    .print-sheet-half-letter h1 { font-size: 0.34in; }
+    .print-sheet-half-letter .brand-logo { height: 0.56in; width: 0.56in; }
+    .print-sheet-half-letter .print-url { max-width: 4.6in; }
+    .print-sheet-photo-4x6 { align-items: center; gap: 0.18in; justify-content: center; }
+    .print-sheet-photo-4x6 .print-insert { height: 6in; width: 4in; }
+    .print-sheet-photo-4x6 .print-panel { padding: 0.22in; }
+    .print-sheet-photo-4x6 .brand { gap: 0.12in; margin-bottom: 0.12in; }
+    .print-sheet-photo-4x6 .brand-logo { border-radius: 0.09in; height: 0.46in; width: 0.46in; }
+    .print-sheet-photo-4x6 .venue-name { font-size: 0.12in; }
+    .print-sheet-photo-4x6 h1 { font-size: 0.25in; }
+    .print-sheet-photo-4x6 .callout { font-size: 0.15in; margin-bottom: 0.13in; }
+    .print-sheet-photo-4x6 .qr-box { border-radius: 0.12in; padding: 0.12in; }
+    .print-sheet-photo-4x6 .print-url { font-size: 0.08in; max-width: 3.4in; }
+    .print-sheet-photo-4x6 footer { font-size: 0.09in; margin-top: 0.12in; }
     @media screen {
       main { padding: 24px; }
-      .print-sheet { border: 1px solid #e5ded6; box-shadow: 0 20px 60px rgba(80, 54, 31, 0.12); margin: 0 auto; max-width: 11in; min-height: 8.2in; }
-      .print-sheet-poster { max-width: 8.5in; min-height: 11in; }
-    }
-    @media print {
-      .print-sheet { min-height: auto; }
-      .print-sheet-poster { min-height: 10.3in; }
+      .print-sheet { border: 1px solid #e5ded6; box-shadow: 0 20px 60px rgba(80, 54, 31, 0.12); margin: 0 auto; }
     }
   `;
 }

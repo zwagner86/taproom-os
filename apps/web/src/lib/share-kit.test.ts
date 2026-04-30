@@ -54,8 +54,12 @@ describe("share kit URLs", () => {
     expect(parsePrintDestinationKey("menu")).toEqual({ id: "menu", kind: "menu" });
     expect(parsePrintDestinationKey("event-123")).toEqual({ eventId: "123", kind: "event" });
     expect(parsePrintDestinationKey("unknown")).toBeNull();
-    expect(resolvePrintLayout("poster")).toBe("poster");
-    expect(resolvePrintLayout("tent")).toBe("tent");
-    expect(resolvePrintLayout(undefined)).toBe("tent");
+    expect(resolvePrintLayout("letter")).toBe("letter");
+    expect(resolvePrintLayout("half-letter")).toBe("half-letter");
+    expect(resolvePrintLayout("photo-4x6")).toBe("photo-4x6");
+    expect(resolvePrintLayout("poster")).toBe("letter");
+    expect(resolvePrintLayout("tent")).toBe("letter");
+    expect(resolvePrintLayout(undefined)).toBe("letter");
+    expect(resolvePrintLayout(["photo-4x6", "letter"])).toBe("photo-4x6");
   });
 });

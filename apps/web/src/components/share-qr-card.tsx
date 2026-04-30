@@ -10,6 +10,12 @@ import { Check, Copy, Download, ExternalLink, Printer } from "lucide-react";
 import { Badge, Button, Card, Input } from "@/components/ui";
 import type { ShareDestination } from "@/lib/share-kit";
 
+const PRINT_LAYOUT_OPTIONS = [
+  { label: "8.5 x 11", layout: "letter" },
+  { label: "5.5 x 8.5", layout: "half-letter" },
+  { label: "4 x 6", layout: "photo-4x6" },
+] as const;
+
 export function ShareQrCard({
   destination,
   venueSlug,
@@ -112,18 +118,17 @@ export function ShareQrCard({
               <Download className="h-4 w-4" />
               Download SVG
             </Button>
-            <Button asChild size="sm" variant="secondary">
-              <Link href={`/app/${venueSlug}/share/print/${destination.printKey}?layout=tent` as Route} target="_blank">
-                <Printer className="h-4 w-4" />
-                Table tent
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="secondary">
-              <Link href={`/app/${venueSlug}/share/print/${destination.printKey}?layout=poster` as Route} target="_blank">
-                <Printer className="h-4 w-4" />
-                Poster
-              </Link>
-            </Button>
+            {PRINT_LAYOUT_OPTIONS.map((option) => (
+              <Button asChild key={option.layout} size="sm" variant="secondary">
+                <Link
+                  href={`/app/${venueSlug}/share/print/${destination.printKey}/pdf?layout=${option.layout}` as Route}
+                  target="_blank"
+                >
+                  <Printer className="h-4 w-4" />
+                  {option.label}
+                </Link>
+              </Button>
+            ))}
           </div>
         </div>
 

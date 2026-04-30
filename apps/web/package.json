@@ -29,6 +29,8 @@
     "clsx": "^2.1.1",
     "lucide-react": "latest",
     "next": "latest",
+    "pdf-lib": "^1.17.1",
+    "qr.js": "^0.0.0",
     "react": "latest",
     "react-dom": "latest",
     "react-qr-code": "^2.0.21",

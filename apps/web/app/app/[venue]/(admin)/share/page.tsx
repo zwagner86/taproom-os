@@ -24,7 +24,7 @@ export default async function VenueSharePage({
   return (
     <div className="space-y-6">
       <PageHeader
-        subtitle={`Copy stable public links, download QR codes, and print table tents or posters for ${access.venue.name}.`}
+        subtitle={`Copy stable public links, download QR codes, and print acrylic sign inserts for ${access.venue.name}.`}
         title="Share & QR"
       />
 

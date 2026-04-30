@@ -68,6 +68,7 @@ describe("venue share page", () => {
     );
 
     expect(markup).toContain("Share &amp; QR");
+    expect(markup).toContain("print acrylic sign inserts");
     expect(markup).toContain("https://taproomos.example/v/demo-taproom/menu");
     expect(markup).toContain("https://taproomos.example/v/demo-taproom/events");
     expect(markup).toContain("https://taproomos.example/v/demo-taproom/memberships");
